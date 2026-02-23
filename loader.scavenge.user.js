@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         سكربت الإغارات الجماعية - غزااوي
-// @namespace    Gzawy-Scripts
+// @name         AlG_scavenge-الأغارات
+// @namespace    AlGzawy-Scripts-scavenge
 // @version      1.0
-// @description  تحميل وتنفيذ سكربت الإغارات الجماعية
-// @author       الغزااوي
+// @description  سكربت يقوم بتشغيل سكربت الاغارات المشهور تلقائيا 
+// @author       AlGzawy
 // @match        https://*/*=scavenge_mass*
 // @connect      raw.githubusercontent.com
 // @grant        GM_xmlhttpRequest
@@ -13,10 +13,10 @@
 (function( ) {
     'use strict';
 
-    // الرابط الصحيح والدائم للكود المشفر
+   
     const scriptUrl = 'https://raw.githubusercontent.com/TW-AlGzawy/TW-Tampermonkey/main/AlG_scavenge.js';
 
-    console.log('جاري تحميل سكربت غزااوي...' );
+    console.log('جاري تحميل سكربت اغارات غزااوي...' );
 
     GM_xmlhttpRequest({
         method: "GET",
@@ -24,7 +24,7 @@
         onload: function(response ) {
             if (response.status === 200) {
                 console.log('تم التحميل بنجاح، جاري التشغيل...');
-                // يقوم بتشغيل الكود المشفر الذي تم تحميله
+                
                 new Function(response.responseText)();
             } else {
                 console.error('فشل تحميل السكربت. الحالة:', response.status);
