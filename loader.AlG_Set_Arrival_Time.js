@@ -2,14 +2,14 @@
 // @name         Set Arrival Time - بوت أرساليات التلقائية [v1.2]
 // @namespace    AlGzawy-Scripts-scavenge
 // @version      1.2
+// @connect      raw.githubusercontent.com
+// @grant        GM_xmlhttpRequest
+// @run-at       document-end
 // @description  سكربت يقوم بارسال الهجمات او الدعم عنك تلقائيا بالجزء 
 // @author       AlGzawy
 // @match         https://*.tribalwars.pt/*confirm*
 // @match         https://*.tribalwars.pt/*map*
 // @match         https://*.tribalwars.ae/game.php?*
-// @connect      raw.githubusercontent.com
-// @grant        GM_xmlhttpRequest
-// @run-at       document-end
 // ==/UserScript==
 
 (function( ) {
