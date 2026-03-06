@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Set Arrival Time - بوت أرساليات التلقائية [v1.2]
+// @name         Set Arrival Time - بوت أرساليات التلقائية [v1.4]
 // @namespace    AlGzawy-Scripts-scavenge
-// @version      1.2
+// @version      1.4
 // @connect      raw.githubusercontent.com
 // @grant        GM_xmlhttpRequest
 // @run-at       document-end
