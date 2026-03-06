@@ -28,7 +28,8 @@
     const DEFAULTS = {
         stepMarket: true, stepAcademy: true, scheduleMarket: false, marketInterval: 60,
         lastMarketRun: 0, minDelay: 1500, maxDelay: 6000, minRetry: 8000,
-        maxRetry: 15000, isRunning: false, panelTop: '250px', panelLeft: '10px'
+        maxRetry: 15000, isRunning: false, panelTop: '250px', panelLeft: '10px',
+        activeTabOnly: false // <-- الإعداد الجديد
     };
 
     const settingsForExternalCode = {
