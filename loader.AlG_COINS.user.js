@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AlGzawy - بوت الصقل المطور [v1.5]
 // @namespace    AlGzawy-Scripts-refine-loader
-// @version      1.5 // إصدار جديد لإضافة ميزة قفل التاب
+// @version      1.5
 // @description  يقوم بتحميل وتشغيل بوت الصقل المطور من AlGzawy
 // @author       AlGzawy
 // @match        https://*.tribalwars.ae/game.php*
