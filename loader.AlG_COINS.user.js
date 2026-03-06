@@ -7,8 +7,8 @@
 // @match        https://*.tribalwars.ae/game.php*
 // @icon         https://i.imgur.com/5p33oA9.png
 // @connect      raw.githubusercontent.com
-// @updateURL    https://raw.githubusercontent.com/TW-AlGzawy/TW-Tampermonkey/main/AlG_Refine_Loader.user.js
-// @downloadURL  https://raw.githubusercontent.com/TW-AlGzawy/TW-Tampermonkey/main/AlG_Refine_Loader.user.js
+// @updateURL    https://raw.githubusercontent.com/TW-AlGzawy/TW-Tampermonkey/main/loader.AlG_COINS.user.js
+// @downloadURL  https://raw.githubusercontent.com/TW-AlGzawy/TW-Tampermonkey/main/loader.AlG_COINS.user.js
 // @grant        GM_xmlhttpRequest
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -21,7 +21,7 @@
     'use strict';
 
     const SCRIPT_URL = 'https://raw.githubusercontent.com/TW-AlGzawy/TW-Tampermonkey/main/AlG_COINS.js';
-    const UPDATE_URL = 'https://raw.githubusercontent.com/TW-AlGzawy/TW-Tampermonkey/main/AlG_Refine_Loader.user.js';
+    const UPDATE_URL = 'https://raw.githubusercontent.com/TW-AlGzawy/TW-Tampermonkey/main/loader.AlG_COINS.user.js';
     const CURRENT_VERSION = GM_info.script.version;
 
     const SETTINGS_PREFIX = 'algzawy_refine_bot_';
