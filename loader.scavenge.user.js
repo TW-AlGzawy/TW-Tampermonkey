@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         AlG_scavenge-الأغارات
+// @name         AlG_scavenge- الأغارات [v1.4]
 // @namespace    AlGzawy-Scripts-scavenge
-// @version      1.1
+// @version      1.4
 // @description  سكربت يقوم بتشغيل سكربت الاغارات المشهور تلقائيا 
 // @author       AlGzawy
 // @match        https://*/*=scavenge_mass*
