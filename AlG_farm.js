@@ -1,35 +1,31 @@
 // هذا الكود يستقبل كائن "settings" من سكربت التحميل
-// لا تقم بتعريف المتغير settings هنا، سيتم تمريره عند التشغيل
-
-(function() {
+// لاحظ التغيير في السطر الأول والأخير
+(function(settings) { // <--- 1. تعديل هنا: استقبال المعامل
     'use strict';
 
     if (!window.location.href.includes('screen=am_farm')) {
         return;
     }
 
-    // تحويل حرف القالب إلى رقم العمود الصحيح
-    // A -> 8, B -> 9, C -> 10
-    const templateMap = {
-        'A': 8,
-        'B': 9,
-        'C': 10
-    };
+    const templateMap = { 'A': 8, 'B': 9, 'C': 10 };
 
-    // اقرأ القالب من الإعدادات التي تم تمريرها، وإذا لم توجد، استخدم 'A' كافتراضي
+    // الآن هذا السطر سيعمل بشكل صحيح لأن 'settings' معرف كمعامل للدالة
     const selectedTemplate = settings.template || 'A';
     const type = templateMap[selectedTemplate];
 
     console.log(`تم اختيار قالب النهب: ${selectedTemplate} (العمود: ${type})`);
 
-    // سرعة التنقل بين القرى
     var speed = Math.random() * 20000 + 35000;
 
     var attackInterval = setInterval(function() {
         var plunderList = $('#plunder_list tr.plunder_row');
         if (plunderList.length > 0) {
             var firstRow = plunderList.first();
-            firstRow.find('td:eq(' + type + ') a').click();
+            // تأكد من وجود الزر قبل النقر عليه
+            var attackButton = firstRow.find('td:eq(' + type + ') a');
+            if (attackButton.length > 0) {
+                attackButton.click();
+            }
             firstRow.remove();
         } else {
             console.log("قائمة النهب فارغة، سيتم الانتقال للقرية التالية.");
@@ -55,4 +51,4 @@
         switchToNextVillage();
     }
 
-})();
+})(settings); // <--- 2. تعديل هنا: تمرير المعامل
