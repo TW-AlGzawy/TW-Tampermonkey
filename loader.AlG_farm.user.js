@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AlGzawy - Farm Bot professional
 // @namespace    AlG-Scripts-farm-professional
-// @version      1.0
+// @version      1.1
 // @description  يقوم بتحميل وتشغيل بوت النهب الآمن من AlGzawy
 // @author       AlGzawy
 // @match        https://*.tribalwars.ae/game.php?*screen=am_farm*
