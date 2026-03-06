@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         AlGzawy - Farm Bot professional [v1.4]
+// @name         AlGzawy - Farm Bot النهب [v1.4]
 // @namespace    AlGzawy-Scripts-farm-loader
 // @version      1.4
 // @description  يقوم بتحميل وتشغيل بوت النهب الآمن من AlGzawy
