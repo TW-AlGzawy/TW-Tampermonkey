@@ -1,56 +1,30 @@
-// هذا هو الكود الخام الذي سيتم حقنه داخل new Function
-// لا تضعه داخل (function(...) { ... })();
+// هذا الكود يستقبل '$' و 'settings' من سكربت التحميل
 
-'use strict';
-
-// 1. تحقق من الصفحة أولاً
-if (!window.location.href.includes('screen=am_farm')) {
-    // لا تفعل شيئاً إذا لم نكن في صفحة مساعد النهب
-    return;
-}
-
-// 2. استقبل الإعدادات
-// 'settings' يتم تمريره مباشرة من new Function
+// 1. تحديد المتغيرات من الإعدادات
 const templateMap = { 'A': 8, 'B': 9, 'C': 10 };
-const selectedTemplate = settings.template || 'A';
-const type = templateMap[selectedTemplate];
+const type = templateMap[settings.template] || 8; // القيمة الافتراضية 8 (A)
+const speed = Math.random() * 20000 + 35000;
 
-console.log(`[AlGzawy Farm Bot] بدأ التشغيل. القالب: ${selectedTemplate}`);
+console.log(`[AlGzawy] بدء النهب باستخدام القالب ${settings.template}`);
 
-// 3. بقية الكود كما هو
-var speed = Math.random() * 20000 + 35000;
-
-var attackInterval = setInterval(function() {
-    var plunderList = $('#plunder_list tr.plunder_row');
-    if (plunderList.length > 0) {
-        var firstRow = plunderList.first();
-        var attackButton = firstRow.find('td:eq(' + type + ') a');
-        if (attackButton.length > 0) {
-            console.log(`[AlGzawy Farm Bot] إرسال هجوم من الصف الأول باستخدام القالب ${selectedTemplate}`);
-            attackButton.click();
-        }
-        firstRow.remove();
+// 2. دالة إرسال الهجمات (السكربت الأصلي مع تعديل بسيط)
+const attackInterval = setInterval(function() {
+    const firstRow = $('#plunder_list tr.plunder_row:first');
+    if (firstRow.length > 0) {
+        firstRow.find('td:eq(' + type + ') a').click();
+        // لا نستخدم remove() لأن اللعبة تزيله تلقائياً بعد النقر
     } else {
-        // لا يوجد المزيد من الأهداف في القائمة
+        // إذا لم تعد هناك صفوف، أوقف التكرار
         clearInterval(attackInterval);
-        switchToNextVillage();
     }
-}, Math.ceil((Math.random() * 200) + 500)); // زدنا الوقت قليلاً ليكون أكثر أماناً
+}, Math.ceil((Math.random() * 200) + 300));
 
-function switchToNextVillage() {
-    console.log("[AlGzawy Farm Bot] قائمة النهب فارغة، سيتم الانتقال للقرية التالية.");
-    setTimeout(function() {
-        var nextVillageButton = $('#village_switch_right');
-        if (nextVillageButton.length > 0) {
-            location.href = nextVillageButton.attr('href');
-        } else {
-            location.reload();
-        }
-    }, speed);
-}
-
-// تحقق أولي: إذا كانت القائمة فارغة عند بدء التشغيل
-if ($('#plunder_list tr.plunder_row').length === 0) {
-    clearInterval(attackInterval);
-    switchToNextVillage();
-}
+// 3. دالة الانتقال للقرية التالية (السكربت الأصلي)
+setTimeout(function() {
+    if ($('#village_switch_right').length === 0) {
+        location.reload();
+    } else {
+        // استخدام click() أفضل لأنه يشغل أي أوامر مرتبطة بالزر
+        $('#village_switch_right').click();
+    }
+}, speed);
