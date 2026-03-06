@@ -5,8 +5,8 @@
 // @description  سكربت يقوم بتشغيل سكربت الاغارات المشهور تلقائيا 
 // @author       AlGzawy
 // @match        https://*/*=scavenge_mass*
-// @updateURL    https://raw.githubusercontent.com/TW-AlGzawy/TW-Tampermonkey/main/loader.scavenge.user.js
-// @downloadURL  https://raw.githubusercontent.com/TW-AlGzawy/TW-Tampermonkey/main/loader.scavenge.user.js
+// @updateURL    https://raw.githubusercontent.com/TW-AlGzawy/TW-Tampermonkey/main/loader.AlG_scavenge.user.js
+// @downloadURL  https://raw.githubusercontent.com/TW-AlGzawy/TW-Tampermonkey/main/loader.AlG_scavenge.user.js
 // @icon         https://files.manuscdn.com/user_upload_by_module/session_file/310419663029215752/GYTOxdyXXZqmFprq.jpg
 // @connect      raw.githubusercontent.com
 // @grant        GM_xmlhttpRequest
