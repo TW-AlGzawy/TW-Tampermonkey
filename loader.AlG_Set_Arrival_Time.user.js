@@ -5,6 +5,7 @@
 // @connect      raw.githubusercontent.com
 // @grant        GM_xmlhttpRequest
 // @run-at       document-end
+// @icon         https://files.manuscdn.com/user_upload_by_module/session_file/310419663029215752/GYTOxdyXXZqmFprq.jpg
 // @description  سكربت يقوم بارسال الهجمات او الدعم عنك تلقائيا بالجزء 
 // @updateURL    https://raw.githubusercontent.com/TW-AlGzawy/TW-Tampermonkey/main/loader.AlG_Arrival_Time.user.js
 // @downloadURL  https://raw.githubusercontent.com/TW-AlGzawy/TW-Tampermonkey/main/loader.AlG_Arrival_Time.user.js
