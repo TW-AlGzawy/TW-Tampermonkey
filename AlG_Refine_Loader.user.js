@@ -1,15 +1,14 @@
 // ==UserScript==
 // @name         AlGzawy - بوت الصقل المطور (Loader)
 // @namespace    AlGzawy-Scripts-refine-loader
-// @version      1.0
+// @version      1.4 
 // @description  يقوم بتحميل وتشغيل بوت الصقل المطور من AlGzawy
 // @author       AlGzawy
-// @match        https://*.tribalwars.ae/game.php?*screen=market&mode=call*
-// @match        https://*.tribalwars.ae/game.php?*screen=snob*
-// @icon         https://i.imgur.com/5p33oA9.png
+// @match        https://*.tribalwars.ae/game.php*
+// @icon         https://files.manuscdn.com/user_upload_by_module/session_file/310419663029215752/GYTOxdyXXZqmFprq.jpg
 // @connect      raw.githubusercontent.com
-// @updateURL    !!!ضع هنا رابط اللودر!!!
-// @downloadURL  !!!ضع هنا رابط اللودر!!!
+// @updateURL    https://raw.githubusercontent.com/TW-AlGzawy/TW-Tampermonkey/main/AlG_Refine_Loader.user.js
+// @downloadURL  https://raw.githubusercontent.com/TW-AlGzawy/TW-Tampermonkey/main/AlG_Refine_Loader.user.js
 // @grant        GM_xmlhttpRequest
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -23,8 +22,9 @@
 (function( ) {
     'use strict';
 
-    const SCRIPT_URL = '!!!ضع هنا رابط الكود المشفر!!!';
-    const UPDATE_URL = GM_info.script.updateURL;
+    
+    const SCRIPT_URL = 'https://raw.githubusercontent.com/TW-AlGzawy/TW-Tampermonkey/main/AlG_Refine_Core.js';
+    const UPDATE_URL = 'https://raw.githubusercontent.com/TW-AlGzawy/TW-Tampermonkey/main/AlG_Refine_Loader.user.js';
     const CURRENT_VERSION = GM_info.script.version;
 
     const SETTINGS_PREFIX = 'algzawy_refine_bot_';
@@ -43,9 +43,8 @@
         panelLeft: '10px'
     };
 
-    // تجهيز الإعدادات لتمريرها للكود الخارجي
     const settingsForExternalCode = {
-        save: function(key, value) {
+        save: function(key, value ) {
             GM_setValue(SETTINGS_PREFIX + key, value);
         }
     };
@@ -56,7 +55,6 @@
 
     unsafeWindow.ALGZAWY_SETTINGS = settingsForExternalCode;
 
-    // دالة فحص التحديثات
     function checkForUpdates() {
         const updateButton = document.getElementById('check-update-btn');
         updateButton.textContent = 'جاري البحث...';
@@ -93,7 +91,6 @@
         });
     }
 
-    // مراقب لإضافة زر التحديثات بعد بناء الواجهة
     const observer = new MutationObserver((mutations, obs) => {
         const panelBody = document.querySelector('#algzawy-refine-body');
         if (panelBody && !document.getElementById('check-update-btn')) {
@@ -105,24 +102,23 @@
             `;
             panelBody.appendChild(updateRow);
             document.getElementById('check-update-btn').addEventListener('click', checkForUpdates);
-            obs.disconnect(); // نوقف المراقب بعد إضافة الزر
+            obs.disconnect();
         }
     });
     observer.observe(document.body, { childList: true, subtree: true });
 
-    // تحميل الكود الأساسي
     console.log('[AlGzawy Loader] جاري تحميل بوت الصقل...');
     GM_xmlhttpRequest({
         method: "GET",
-        url: SCRIPT_URL + '?t=' + Date.now( ), // إضافة متغير عشوائي لمنع التخزين المؤقت
+        url: SCRIPT_URL + '?t=' + Date.now( ),
         onload: function(response) {
             if (response.status === 200) {
                 console.log('[AlGzawy Loader] تم التحميل بنجاح. جاري تشغيل البوت...');
                 new Function(response.responseText)();
             } else if (response.status === 404) {
-                alert('فشل تحميل الكود الأساسي (ملف غير موجود). يرجى التواصل مع AlGzawy.');
+                alert('فشل تحميل الكود الأساسي (ملف غير موجود 404). تأكد من صحة الرابط في اللودر. يرجى التواصل مع AlGzawy.');
             } else {
-                alert('فشل تحميل بوت الصقل. قد تكون هناك مشكلة في الخادم. يرجى المحاولة لاحقاً.');
+                alert(`فشل تحميل بوت الصقل. كود الحالة: ${response.status}. يرجى المحاولة لاحقاً.`);
             }
         },
         onerror: function() {
