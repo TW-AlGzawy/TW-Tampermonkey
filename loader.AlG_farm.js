@@ -13,13 +13,6 @@
 
 (function( ) {
     'use strict';
-/*
-A = 8
-B = 9
-C = 10
-*/
-var type = 8;
-var speed = Math.random() * 20000 + 35000;
    
     const scriptUrl = 'https://raw.githubusercontent.com/TW-AlGzawy/TW-Tampermonkey/main/AlG_farm.js';
 
