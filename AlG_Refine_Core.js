@@ -1,21 +1,12 @@
-// AlGzawy - بوت الصقل المطور (الكود الأساسي)
-// هذا الملف يحتوي على كل منطق السكربت ويتم تحميله عبر اللودر.
-
-(function(SETTINGS) { // <-- لاحظ أننا نستقبل الإعدادات هنا
+(function(SETTINGS) { 
     'use strict';
-
-    // --- 1. نظام الإعدادات ---
-    // لم نعد بحاجة لـ DEFAULTS أو SETTINGS.get هنا، اللودر سيوفر كل شيء.
-
-    // --- 2. متغيرات التشغيل ---
     let currentTimeoutId = null;
-    let isBotActive = SETTINGS.isRunning; // نقرأ الحالة من الإعدادات المستلمة
+    let isBotActive = SETTINGS.isRunning;
     let audioEnabled = false;
     let detectionAudio = new Audio('https://cdn.freesound.org/previews/441/441089_8691539-lq.mp3' );
 
-    // --- 3. الواجهة العائمة ---
     function createSettingsPanel() {
-        const currentSettings = SETTINGS; // نستخدم الإعدادات المستلمة مباشرة
+        const currentSettings = SETTINGS;
         const panelHTML = `
             <div id="algzawy-refine-panel" style="position: fixed; top: ${currentSettings.panelTop}; left: ${currentSettings.panelLeft}; z-index: 9998; background-color: #f4e4bc; border: 2px solid #7d510f; border-radius: 8px; font-family: 'Trebuchet MS', sans-serif; width: 280px; direction: rtl;">
                 <div id="algzawy-refine-header" style="background-color: #c1a264; padding: 8px; cursor: move; border-radius: 6px 6px 0 0; display: flex; justify-content: space-between; align-items: center;">
@@ -84,7 +75,6 @@
         else { btn.text('بدء').css('background-color', '#28a745'); }
     }
 
-    // --- 4. المنطق الأساسي للسكربت ---
     const getNumberInRange = (min, max) => Math.floor(Math.random() * (max - min + 1) + min);
 
     function detectBotDetection() {
