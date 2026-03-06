@@ -1,12 +1,14 @@
 // ==UserScript==
-// @name         AlGzawy - Farm Bot professional
-// @namespace    AlG-Scripts-farm-professional
+// @name         AlGzawy - Farm Bot Loader
+// @namespace    AlGzawy-Scripts-farm-loader
 // @version      1.1
 // @description  يقوم بتحميل وتشغيل بوت النهب الآمن من AlGzawy
 // @author       AlGzawy
 // @match        https://*.tribalwars.ae/game.php?*screen=am_farm*
 // @icon         https://files.manuscdn.com/user_upload_by_module/session_file/310419663029215752/GYTOxdyXXZqmFprq.jpg
 // @connect      raw.githubusercontent.com
+// @updateURL    https://raw.githubusercontent.com/TW-AlGzawy/TW-Tampermonkey/main/AlGzawy-Loader.user.js // <--- رابط التحقق
+// @downloadURL  https://raw.githubusercontent.com/TW-AlGzawy/TW-Tampermonkey/main/AlGzawy-Loader.user.js // <--- رابط التنزيل
 // @grant        GM_xmlhttpRequest
 // @grant        GM_setValue
 // @grant        GM_getValue
