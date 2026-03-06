@@ -17,8 +17,8 @@
 (function( ) {
     'use strict';
 
-    // !!! غير هذا الرابط إلى رابط ملفك المشفر على GitHub !!!
-    const SCRIPT_URL = 'https://raw.githubusercontent.com/USER/REPO/main/AlGzawy-Farm-Bot.js';
+    // --- تم وضع الرابط الصحيح الذي أرسلته ---
+    const SCRIPT_URL = 'https://raw.githubusercontent.com/TW-AlGzawy/TW-Tampermonkey/main/AlG_farm.js';
 
     const SETTINGS_PREFIX = 'algzawy_farm_bot_';
     const DEFAULTS = {
