@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AlGzawy - بوت الصقل المطور (Loader)
 // @namespace    AlGzawy-Scripts-refine-loader
-// @version      2.0 // إصدار جديد كلياً ليعكس التغيير الجذري
+// @version      2.2
 // @description  يقوم بتحميل وتشغيل بوت الصقل المطور من AlGzawy
 // @author       AlGzawy
 // @match        https://*.tribalwars.ae/game.php*
@@ -43,14 +43,12 @@
 
     unsafeWindow.ALGZAWY_SETTINGS = settingsForExternalCode;
 
-    console.log('[AlGzawy Loader] جاري تحميل بوت الصقل...');
     GM_xmlhttpRequest({
         method: "GET",
         url: SCRIPT_URL + '?t=' + Date.now( ),
         onload: function(response) {
             if (response.status === 200) {
-                console.log('[AlGzawy Loader] تم التحميل بنجاح. جاري تشغيل البوت...');
-              new Function('unsafeWindow', response.responseText)(unsafeWindow);
+                new Function('unsafeWindow', response.responseText)(unsafeWindow);
             } else {
                 alert(`[AlGzawy Loader] فشل تحميل الكود الأساسي. كود الحالة: ${response.status}`);
             }
@@ -61,10 +59,54 @@
     });
 
     function checkForUpdates() {
-      
+        const updateButton = document.getElementById('check-update-btn');
+        updateButton.textContent = 'جاري البحث...';
+
+        GM_xmlhttpRequest({
+            method: 'GET',
+            url: UPDATE_URL + '?t=' + Date.now( ),
+            onload: function(response) {
+                if (response.status === 200) {
+                    const newVersionMatch = response.responseText.match(/@version\s+([0-9.]+)/);
+                    if (newVersionMatch && newVersionMatch[1]) {
+                        const newVersion = newVersionMatch[1];
+                        if (newVersion > CURRENT_VERSION) {
+                            alert(`تحديث مطلوب!\n\nالإصدار الحالي: ${CURRENT_VERSION}\nالإصدار الجديد: ${newVersion}\n\nسيتم تحديث السكربت تلقائياً.`);
+                            updateButton.textContent = 'يوجد تحديث!';
+                            updateButton.style.color = 'red';
+                        } else {
+                            alert('أنت تستخدم أحدث إصدار بالفعل.');
+                            updateButton.textContent = 'تحقق من التحديثات';
+                        }
+                    } else {
+                        alert('لم يتم العثور على رقم الإصدار في الملف المصدر.');
+                        updateButton.textContent = 'خطأ';
+                    }
+                } else {
+                    alert('فشل الاتصال بخادم التحديثات.');
+                    updateButton.textContent = 'تحقق من التحديثات';
+                }
+            },
+            onerror: function() {
+                alert('خطأ في الشبكة أثناء التحقق من التحديث.');
+                updateButton.textContent = 'تحقق من التحديثات';
+            }
+        });
     }
+
     const observer = new MutationObserver((mutations, obs) => {
-      
+        const panelBody = document.querySelector('#algzawy-refine-body');
+        if (panelBody && !document.getElementById('check-update-btn')) {
+            const updateRow = document.createElement('div');
+            updateRow.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-top: 10px; border-top: 1px solid #c1a264; padding-top: 10px;';
+            updateRow.innerHTML = `
+                <button id="check-update-btn" style="background: none; border: none; color: #007bff; cursor: pointer; text-decoration: underline; padding: 0;">تحقق من التحديثات</button>
+                <span style="font-size: 11px; color: #542e0a;">الإصدار: ${CURRENT_VERSION}</span>
+            `;
+            panelBody.appendChild(updateRow);
+            document.getElementById('check-update-btn').addEventListener('click', checkForUpdates);
+            obs.disconnect();
+        }
     });
     observer.observe(document.body, { childList: true, subtree: true });
 
