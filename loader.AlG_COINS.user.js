@@ -24,16 +24,25 @@
     const UPDATE_URL = 'https://raw.githubusercontent.com/TW-AlGzawy/TW-Tampermonkey/main/loader.AlG_COINS.user.js';
     const CURRENT_VERSION = GM_info.script.version;
 
-    const SETTINGS_PREFIX = 'algzawy_refine_bot_';
+    // --- إنشاء أو استرجاع معرّف التاب الفريد ---
+    let tabId = sessionStorage.getItem('algzawy_refine_tab_id' );
+    if (!tabId) {
+        tabId = 'tab_' + Date.now();
+        sessionStorage.setItem('algzawy_refine_tab_id', tabId);
+    }
+
+    // --- نظام الإعدادات المركزي في اللودر (يعتمد على معرّف التاب) ---
+    const SETTINGS_PREFIX = `algzawy_refine_bot_${tabId}_`;
     const DEFAULTS = {
         stepMarket: true, stepAcademy: true, scheduleMarket: false, marketInterval: 60,
         lastMarketRun: 0, minDelay: 1500, maxDelay: 6000, minRetry: 8000,
-        maxRetry: 15000, isRunning: false, panelTop: '250px', panelLeft: '10px',
-        activeTabOnly: false // <-- الإعداد الجديد
+        maxRetry: 15000, isRunning: false, panelTop: '250px', panelLeft: '10px'
     };
 
     const settingsForExternalCode = {
-        save: function(key, value ) {
+        tabId: tabId,
+        save: function(key, value) {
+            // نستخدم GM_setValue للحفظ الدائم بين الجلسات لنفس التاب
             GM_setValue(SETTINGS_PREFIX + key, value);
         }
     };
@@ -96,15 +105,12 @@
     }
 
     const observer = new MutationObserver((mutations, obs) => {
-        const panelBody = document.querySelector('#algzawy-refine-body');
-        if (panelBody && !document.getElementById('check-update-btn')) {
-            const updateRow = document.createElement('div');
-            updateRow.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-top: 10px; border-top: 1px solid #c1a264; padding-top: 10px;';
-            updateRow.innerHTML = `
+        const updateContainer = document.querySelector('#update-container');
+        if (updateContainer && !updateContainer.hasChildNodes()) {
+            updateContainer.innerHTML = `
                 <button id="check-update-btn" style="background: none; border: none; color: #007bff; cursor: pointer; text-decoration: underline; padding: 0;">تحقق من التحديثات</button>
                 <span style="font-size: 11px; color: #542e0a;">الإصدار: ${CURRENT_VERSION}</span>
             `;
-            panelBody.appendChild(updateRow);
             document.getElementById('check-update-btn').addEventListener('click', checkForUpdates);
             obs.disconnect();
         }
