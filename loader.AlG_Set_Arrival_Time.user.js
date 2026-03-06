@@ -6,6 +6,8 @@
 // @grant        GM_xmlhttpRequest
 // @run-at       document-end
 // @description  سكربت يقوم بارسال الهجمات او الدعم عنك تلقائيا بالجزء 
+// @updateURL    https://raw.githubusercontent.com/TW-AlGzawy/TW-Tampermonkey/main/loader.AlG_Arrival_Time.user.js
+// @downloadURL  https://raw.githubusercontent.com/TW-AlGzawy/TW-Tampermonkey/main/loader.AlG_Arrival_Time.user.js
 // @author       AlGzawy
 // @match         https://*.tribalwars.pt/*confirm*
 // @match         https://*.tribalwars.pt/*map*
