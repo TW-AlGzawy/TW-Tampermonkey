@@ -5,7 +5,7 @@
 // @description  يقوم بتحميل وتشغيل بوت الصقل المطور من AlGzawy
 // @author       AlGzawy
 // @match        https://*.tribalwars.ae/game.php*
-// @icon         https://i.imgur.com/5p33oA9.png
+// @icon         https://files.manuscdn.com/user_upload_by_module/session_file/310419663029215752/GYTOxdyXXZqmFprq.jpg
 // @connect      raw.githubusercontent.com
 // @updateURL    https://raw.githubusercontent.com/TW-AlGzawy/TW-Tampermonkey/main/loader.AlG_COINS.user.js
 // @downloadURL  https://raw.githubusercontent.com/TW-AlGzawy/TW-Tampermonkey/main/loader.AlG_COINS.user.js
