@@ -1,132 +1,122 @@
-// ==UserScript==
-// @name         AlGzawy - Scavenge Bot Core
-// @version      2.0
-// @description  Automation script for AlGzawy's Scavenge Bot. Not meant for direct installation.
-// @author       AlGzawy
-// ==/UserScript==
+// AlG_scavenge.js
+// © جميع الحقوق محفوظة / AlGzawy
+// هذا الملف يُحمَّل تلقائياً من ملف اللودر — لا تعدّل هذا الملف مباشرة
 
-// This script is not meant to be run directly. It is loaded by the loader.
-(function() {
+(function () {
     'use strict';
 
-    // --- الإعدادات ---
-    const QUICKBAR_SCRIPT_NAME = "أغارات- AlG"; // هذا هو الاسم الذي ستبحث عنه في البار السريع
-    const CLICK_INTERVAL_MS = 1050;
-    const MIN_RELOAD_MINUTES = 15;
-    const MAX_RELOAD_MINUTES = 25;
-    // -------------------
+    const SCRIPT_URL = 'https://shinko-to-kuma.com/scripts/massScavenge.js';
 
-    /**
-     * Searches for a quickbar link by its exact text content and clicks it.
-     */
-    function findAndClickQuickbarLink() {
-        console.log(`[BOT] Searching for quickbar link with text: "${QUICKBAR_SCRIPT_NAME}"`);
-        const links = document.querySelectorAll('a.quickbar_link');
-        for (const link of links) {
-            if (link.textContent.trim() === QUICKBAR_SCRIPT_NAME) {
-                console.log("[BOT] Found the link! Clicking to inject the UI script.");
-                link.click();
-                return true;
-            }
-        }
-        console.error(`[BOT] Quickbar link named "${QUICKBAR_SCRIPT_NAME}" not found!`);
-        alert(`[BOT] لم يتم العثور على سكربت بالاسم "${QUICKBAR_SCRIPT_NAME}" في البار السريع! تأكد من أن الاسم متطابق تماماً.`);
-        return false;
+    // استرجاع الإعدادات المحفوظة أو استخدام القيم الافتراضية
+    const settings = {
+        minReload:          GM_getValue('minReload',          15),
+        maxReload:          GM_getValue('maxReload',          25),
+        delayUiLoad:        GM_getValue('delayUiLoad',        2000),
+        delayAfterCalc:     GM_getValue('delayAfterCalc',     1500),
+        delayBetweenGroups: GM_getValue('delayBetweenGroups', 1050)
+    };
+
+    // ----------------------------------------------------------------
+    // دوال التشغيل
+    // ----------------------------------------------------------------
+    function injectScript(url) {
+        return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = url;
+            script.type = 'text/javascript';
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
     }
 
-    /**
-     * Waits for an element to be visible and then clicks it.
-     * @param {string} selector - The CSS selector for the element.
-     * @param {string} description - A description for logging purposes.
-     * @param {number} timeout - Max time to wait in milliseconds.
-     */
-    function waitAndClick(selector, description, timeout = 15000) {
+    function schedulePageReload() {
+        if (GM_getValue('isBotEnabled', true)) {
+            const reloadInterval = (Math.random() * (settings.maxReload - settings.minReload) + settings.minReload) * 60 * 1000;
+            const reloadInMinutes = (reloadInterval / 60000).toFixed(2);
+            console.log(`[سكربت الغزاوي] تم جدولة إعادة تحميل الصفحة خلال ${reloadInMinutes} دقيقة.`);
+            setTimeout(() => {
+                console.log('[سكربت الغزاوي] جاري إعادة تحميل الصفحة الآن...');
+                location.reload();
+            }, reloadInterval);
+        } else {
+            console.log('[سكربت الغزاوي] البوت متوقف، لن يتم إعادة تحميل الصفحة.');
+        }
+    }
+
+    function waitAndClick(selector, timeout = 10000) {
         return new Promise((resolve, reject) => {
-            console.log(`[BOT] Waiting for button: "${description}" (${selector})`);
             const startTime = Date.now();
             const interval = setInterval(() => {
+                if (!GM_getValue('isBotEnabled', true)) {
+                    clearInterval(interval);
+                    return reject(new Error('تم إيقاف البوت يدوياً.'));
+                }
                 const element = document.querySelector(selector);
-                // Check if the element exists and is visible
                 if (element && element.offsetParent !== null) {
                     clearInterval(interval);
-                    console.log(`[BOT] Found and clicking "${description}".`);
+                    console.log(`[سكربت الغزاوي] تم العثور على "${selector}"، جاري النقر...`);
                     element.click();
                     resolve(element);
                 } else if (Date.now() - startTime > timeout) {
                     clearInterval(interval);
-                    reject(new Error(`[BOT] Timed out waiting for "${description}" (${selector})`));
+                    reject(new Error(`فشل العثور على العنصر المرئي: ${selector} خلال ${timeout}ms`));
                 }
             }, 500);
         });
     }
 
-    /**
-     * The main automation chain.
-     */
-    async function startAutomationChain() {
-        // Step 1: Find and click the quickbar link to load the UI
-        if (!findAndClickQuickbarLink()) {
-            return; // Stop if the link isn't found
+    // ----------------------------------------------------------------
+    // نقطة البداية
+    // ----------------------------------------------------------------
+    async function run() {
+        if (!GM_getValue('isBotEnabled', true)) {
+            console.log("[سكربت الغزاوي] البوت متوقف حالياً.");
+            return;
         }
 
-        // Wait for the UI to be built by the injected script
-        // A short delay is needed for the DOM to update after the click.
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        console.log('[سكربت الغزاوي] يعمل الآن.');
 
         try {
-            console.log("[BOT] Automation chain started. Waiting for UI elements.");
-            
-            // Step 2: Click "Calculate Runtimes"
-            await waitAndClick('#sendMass', "حساب المدة");
+            await injectScript(SCRIPT_URL);
+            console.log('[سكربت الغزاوي] تم تحميل الواجهة بنجاح.');
 
-            // Wait for the next UI to appear
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            await new Promise(resolve => setTimeout(resolve, settings.delayUiLoad));
 
-            // Step 3: Click "Start Group 1"
-            await waitAndClick('#sendMass', "تشغيل المجموعة");
+            console.log("[سكربت الغزاوي] البحث عن زر 'حساب المدة'...");
+            await waitAndClick('#sendMass');
 
-            // Wait for the final sending loop
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            await new Promise(resolve => setTimeout(resolve, settings.delayAfterCalc));
 
-            // Step 4: Start the final clicking loop
-            console.log("[BOT] Starting final attack sending loop.");
+            console.log("[سكربت الغزاوي] البحث عن زر 'تشغيل المجموعة'...");
+            await waitAndClick('#sendMass');
+
+            console.log('[سكربت الغزاوي] بدء حلقة الإرسال النهائية.');
             (function startFinalClickingLoop() {
-                const sendButton = document.querySelector('#massScavengeFinal #sendMass');
+                if (!GM_getValue('isBotEnabled', true)) {
+                    console.log('[سكربت الغزاوي] تم إيقاف البوت يدوياً أثناء حلقة الإرسال.');
+                    return;
+                }
+                const sendButton = document.querySelector('#sendMass');
                 if (sendButton && sendButton.offsetParent !== null) {
-                    console.log(`[BOT] Sending an attack...`);
                     sendButton.click();
-                    // Continue the loop as long as the button exists
-                    setTimeout(startFinalClickingLoop, CLICK_INTERVAL_MS + Math.random() * 400);
+                    console.log('[سكربت الغزاوي] تم إرسال هجمة...');
+                    setTimeout(startFinalClickingLoop, settings.delayBetweenGroups + Math.random() * 400);
                 } else {
-                    console.log("[BOT] All attacks have been sent. Loop stopped.");
-                    // Once all attacks are sent, schedule the page reload.
+                    console.log('[سكربت الغزاوي] اكتملت جميع الهجمات. حلقة النقر توقفت.');
                     schedulePageReload();
                 }
             })();
 
         } catch (error) {
-            console.error("[BOT] A fatal error occurred during the automation chain:", error.message);
-            alert(`[BOT] حدث خطأ فادح: ${error.message}. سيتم إعادة تحميل الصفحة للمحاولة مرة أخرى.`);
-            setTimeout(() => location.reload(), 5000);
+            if (error.message !== 'تم إيقاف البوت يدوياً.') {
+                console.error('[سكربت الغزاوي] حدث خطأ فادح:', error.message);
+                alert(`حدث خطأ في سكربت الإغارات: ${error.message}.`);
+            } else {
+                console.log('[سكربت الغزاوي] تم إيقاف سلسلة الأتمتة بنجاح.');
+            }
         }
     }
 
-    /**
-     * Schedules the page to reload after a random interval.
-     */
-    function schedulePageReload() {
-        const reloadInterval = (Math.random() * (MAX_RELOAD_MINUTES - MIN_RELOAD_MINUTES) + MIN_RELOAD_MINUTES) * 60 * 1000;
-        const reloadInMinutes = (reloadInterval / 60000).toFixed(2);
-        console.log(`[BOT] Page reload scheduled in ${reloadInMinutes} minutes.`);
-        setTimeout(() => {
-            console.log("[BOT] Reloading page now...");
-            location.reload();
-        }, reloadInterval);
-    }
-
-    // --- Main Execution ---
-    console.log("[BOT] AlGzawy Scavenge Bot (Automation Core) is running.");
-    // We wait for the full page to load before starting anything.
-    window.addEventListener('load', startAutomationChain);
-
+    run();
 })();
