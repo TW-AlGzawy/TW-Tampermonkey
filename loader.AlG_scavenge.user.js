@@ -17,7 +17,7 @@
     // ====================================================================================
     // هام جداً: استبدل هذا الرابط بالرابط الخام الحقيقي للكود المشفر على GitHub
     // ====================================================================================
-    const SCRIPT_URL = 'https://raw.githubusercontent.com/TW-AlGzawy/TW-Tampermonkey/main/YOUR-OBFUSCATED-FILE-NAME.js';
+    const SCRIPT_URL = 'https://github.com/TW-AlGzawy/TW-Tampermonkey/raw/refs/heads/main/AlG_scavenge.js';
 
     fetch(SCRIPT_URL )
         .then(response => {
