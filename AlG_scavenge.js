@@ -13,7 +13,7 @@
 
     function runScript() {
         
-        clickElement('a.quickbar_link[data-hash="6e6768aa881d6f943421efc5c3b8b43b"]', 1000 + Math.random() * 2000, function() {
+        clickElement('a.quickbar_link[data-hash="7fc6bd63672584bfd117e31f2d84989e"]', 1000 + Math.random() * 2000, function() {
             let attempts = 0; 
             const maxAttempts = 200; 
 
