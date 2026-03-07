@@ -1,42 +1,38 @@
 // ==UserScript==
-// @name         AlG_scavenge- الأغارات [v1.4]
-// @namespace    AlGzawy-Scripts-scavenge
-// @version      1.4
-// @description  سكربت يقوم بتشغيل سكربت الاغارات المشهور تلقائيا 
+// @name         AlGzawy - Scavenge Bot Loader
+// @namespace    http://tampermonkey.net/
+// @version      1.0
+// @description  يقوم بتحميل وتشغيل بوت الإغارات الخاص بـ AlGzawy
 // @author       AlGzawy
 // @match        https://*/*=scavenge_mass*
-// @updateURL    https://raw.githubusercontent.com/TW-AlGzawy/TW-Tampermonkey/main/loader.AlG_scavenge.user.js
-// @downloadURL  https://raw.githubusercontent.com/TW-AlGzawy/TW-Tampermonkey/main/loader.AlG_scavenge.user.js
-// @icon         https://files.manuscdn.com/user_upload_by_module/session_file/310419663029215752/GYTOxdyXXZqmFprq.jpg
-// @connect      raw.githubusercontent.com
-// @grant        GM_xmlhttpRequest
+// @grant        GM_setValue
+// @grant        GM_getValue
+// @grant        GM_addStyle
 // @run-at       document-end
 // ==/UserScript==
 
 (function( ) {
     'use strict';
 
-   
-    const scriptUrl = 'https://raw.githubusercontent.com/TW-AlGzawy/TW-Tampermonkey/main/AlG_scavenge.js';
+    // ====================================================================================
+    // هام جداً: استبدل هذا الرابط بالرابط الخام الحقيقي للكود المشفر على GitHub
+    // ====================================================================================
+    const SCRIPT_URL = 'https://raw.githubusercontent.com/TW-AlGzawy/TW-Tampermonkey/main/YOUR-OBFUSCATED-FILE-NAME.js';
 
-    console.log('جاري تحميل سكربت اغارات غزااوي...' );
-
-    GM_xmlhttpRequest({
-        method: "GET",
-        url: scriptUrl,
-        onload: function(response ) {
-            if (response.status === 200) {
-                console.log('تم التحميل بنجاح، جاري التشغيل...');
-                
-                new Function(response.responseText)();
-            } else {
-                console.error('فشل تحميل السكربت. الحالة:', response.status);
-                alert('فشل تحميل سكربت الإغارات. يرجى التواصل مع المطور.');
+    fetch(SCRIPT_URL )
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`فشل تحميل السكربت من الشبكة: ${response.statusText}`);
             }
-        },
-        onerror: function(response) {
-            console.error('حدث خطأ في الشبكة أثناء تحميل السكربت.');
-            alert('حدث خطأ في الشبكة. تأكد من اتصالك بالإنترنت أو أن @connect يعمل بشكل صحيح.');
-        }
-    });
+            return response.text();
+        })
+        .then(text => {
+            // يقوم بتشغيل الكود الذي تم تحميله من GitHub
+            new Function(text)();
+            console.log('تم تحميل بوت الغزاوي بنجاح.');
+        })
+        .catch(error => {
+            console.error('فشل تحميل بوت الغزاوي:', error);
+            alert('حدث خطأ أثناء تحميل بوت الإغارات. يرجى التأكد من اتصالك بالإنترنت وتحديث الصفحة.');
+        });
 })();
