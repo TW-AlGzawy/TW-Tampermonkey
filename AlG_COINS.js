@@ -362,24 +362,41 @@
     // ========================================================================
     // كشف حماية البوت
     // ========================================================================
+    var _botAlerted = false;
+
+    function fireBotAlert() {
+        if (_botAlerted) return;
+        _botAlerted = true;
+        console.warn('[AlGzawy] 🚨 BOT PROTECTION DETECTED!');
+        set('isRunning', false);
+        var btn = document.getElementById('alg-start-btn');
+        if (btn) { btn.textContent = 'بدء (هذا التاب)'; btn.style.background = '#28a745'; }
+        playAlertSound();
+        showBotAlert();
+        var time = new Date().toLocaleTimeString('ar-SA');
+        sendTelegram(
+            '🚨 <b>تنبيه بوت الصقل</b>\n' +
+            'تم اكتشاف حماية البوت!\n' +
+            '🕐 الوقت: ' + time + '\n' +
+            '🆔 التاب: ' + TAB_LABEL + '\n' +
+            '⚠️ يرجى التدخل اليدوي فوراً'
+        );
+    }
+
+    // مراقب مستمر — يعمل دائماً بغض النظر عن حالة isRunning
+    function startBotMonitor() {
+        setInterval(function () {
+            if (document.getElementById('botprotection_quest') ||
+                document.getElementsByClassName('bot-protection-row').length > 0) {
+                fireBotAlert();
+            }
+        }, 2500);
+    }
+
     function detectBot() {
         if (document.getElementById('botprotection_quest') ||
             document.getElementsByClassName('bot-protection-row').length > 0) {
-            console.warn('[AlGzawy] 🚨 BOT PROTECTION DETECTED!');
-            set('isRunning', false);
-            var btn = document.getElementById('alg-start-btn');
-            if (btn) { btn.textContent = 'بدء (هذا التاب)'; btn.style.background = '#28a745'; }
-            playAlertSound();
-            showBotAlert();
-            var now  = new Date();
-            var time = now.toLocaleTimeString('ar-SA');
-            sendTelegram(
-                '🚨 <b>تنبيه بوت الصقل</b>\n' +
-                'تم اكتشاف حماية البوت!\n' +
-                '🕐 الوقت: ' + time + '\n' +
-                '🆔 التاب: ' + TAB_LABEL + '\n' +
-                '⚠️ يرجى التدخل اليدوي فوراً'
-            );
+            fireBotAlert();
             return true;
         }
         return false;
@@ -532,6 +549,7 @@
     // ========================================================================
     function init() {
         buildPanel();
+        startBotMonitor();
         if (get('isRunning')) setTimeout(main, rand(1000, 2500));
     }
 
