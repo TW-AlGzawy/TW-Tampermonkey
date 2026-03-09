@@ -19,7 +19,7 @@
     'use strict';
 
     // ========================================================================
-    // رابط الكود الأساسي المشفّر — غيّر هذا الرابط بعد رفع الملف المشفّر
+    // رابط الكود الأساسي المشفّر
     // ========================================================================
     const MAIN_SCRIPT_URL = 'https://github.com/TW-AlGzawy/TW-Tampermonkey/raw/main/AlG_scavenge.js';
     const UPDATE_URL = GM_info.script.updateURL || '';
@@ -92,7 +92,6 @@
         const $toggleBtn = $('#toggle-bot-btn');
         const $panelBody = $('#algzawy-body');
 
-        // تصغير / تكبير اللوحة
         $('#minimize-btn').on('click', () => {
             $panelBody.slideUp();
             $('#minimize-btn').hide();
@@ -104,7 +103,6 @@
             $('#minimize-btn').show();
         });
 
-        // زر تشغيل / إيقاف البوت
         function updateButtonState() {
             if (GM_getValue('isBotEnabled', true)) {
                 $toggleBtn.text('إيقاف البوت').css({ 'background-color': '#dc3545', 'color': 'white' });
@@ -124,7 +122,6 @@
             }
         });
 
-        // حفظ الإعدادات عند تغييرها
         $('#settings-section').on('change', 'input', function () {
             const key = $(this).attr('id');
             const value = parseInt($(this).val(), 10);
@@ -135,7 +132,6 @@
             }
         });
 
-        // زر التحقق من التحديثات
         $('#check-update-btn').on('click', function () {
             if (!UPDATE_URL) {
                 alert('رابط التحديث غير محدد في إعدادات السكربت.');
@@ -177,7 +173,7 @@
     }
 
     // ========================================================================
-    // تحميل الكود الأساسي من الرابط الخارجي
+    // تحميل وتنفيذ الكود الأساسي في سياق Tampermonkey (eval)
     // ========================================================================
     function loadMainScript() {
         GM_xmlhttpRequest({
@@ -186,9 +182,7 @@
             onload: function (response) {
                 if (response.status === 200) {
                     try {
-                        const scriptEl = document.createElement('script');
-                        scriptEl.textContent = response.responseText;
-                        document.head.appendChild(scriptEl);
+                        eval(response.responseText);
                         console.log('[AlGzawy Loader] تم تحميل الكود الأساسي بنجاح.');
                     } catch (e) {
                         console.error('[AlGzawy Loader] خطأ أثناء تنفيذ الكود الأساسي:', e);
