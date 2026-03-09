@@ -452,8 +452,20 @@
         var isMarketPage   = url.includes('screen=market');
         var isAcadPage     = url.includes('screen=snob');
 
+        // ── مساعد: هل حان وقت السوق؟ ──
+        function marketDue() {
+            if (!stepMarket) return false;
+            var elapsed = Date.now() - lastMarketRun;
+            return elapsed >= marketInterval * 60 * 1000;
+        }
+
         // --- صفحة السوق ---
         if (isMarketPage) {
+            // إذا السوق غير محدد، انتقل للأكاديمية أو أوقف
+            if (!stepMarket) {
+                if (stepAcademy) goTo('screen=snob');
+                return;
+            }
             var ok = await doMarket();
             if (ok) {
                 set('lastMarketRun', Date.now());
@@ -462,7 +474,9 @@
                 if (stepAcademy) {
                     goTo('screen=snob');
                 } else {
+                    // سوق فقط: انتظر الفاصل الزمني ثم كرر
                     var wait = scheduleMarket ? marketInterval * 60 * 1000 : rand(minDelay, maxDelay);
+                    console.log('[AlGzawy] السوق فقط — انتظار ' + Math.round(wait / 1000) + 'ث');
                     setTimeout(function () { if (get('isRunning')) goTo('screen=market&mode=call'); }, wait);
                 }
             } else {
@@ -473,18 +487,21 @@
 
         // --- صفحة الأكاديمية ---
         if (isAcadPage) {
+            // إذا الأكاديمية غير محددة، انتقل للسوق مباشرة
+            if (!stepAcademy) {
+                if (stepMarket) goTo('screen=market&mode=call');
+                return;
+            }
             var ok2 = await doAcademy();
             if (ok2) {
                 await sleep(rand(minDelay, maxDelay));
                 if (detectBot()) return;
                 if (stepMarket) {
                     if (scheduleMarket) {
-                        var elapsed    = Date.now() - lastMarketRun;
-                        var intervalMs = marketInterval * 60 * 1000;
-                        if (elapsed >= intervalMs) {
+                        if (marketDue()) {
                             goTo('screen=market&mode=call');
                         } else {
-                            var remaining = Math.round((intervalMs - elapsed) / 60000);
+                            var remaining = Math.round(((marketInterval * 60 * 1000) - (Date.now() - lastMarketRun)) / 60000);
                             console.log('[AlGzawy] السوق بعد ~' + remaining + ' دقيقة — نواصل الأكاديمية');
                             setTimeout(main, rand(minRetry, maxRetry));
                         }
@@ -495,12 +512,17 @@
                     setTimeout(main, rand(minRetry, maxRetry));
                 }
             } else {
-                setTimeout(main, rand(minRetry, maxRetry));
+                // الأكاديمية فشلت — تحقق هل حان وقت السوق قبل إعادة المحاولة
+                if (stepMarket && scheduleMarket && marketDue()) {
+                    goTo('screen=market&mode=call');
+                } else {
+                    setTimeout(main, rand(minRetry, maxRetry));
+                }
             }
             return;
         }
 
-        // --- صفحة غير معروفة ---
+        // --- صفحة غير معروفة: اذهب للخطوة الأولى المحددة ---
         if (stepAcademy)      { goTo('screen=snob'); }
         else if (stepMarket)  { goTo('screen=market&mode=call'); }
     }
