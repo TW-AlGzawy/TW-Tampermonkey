@@ -83,9 +83,10 @@
                 '</div>' +
 
                 // فاصل السوق
+                '<hr style="border:none;border-top:1px solid #c1a264;margin:4px 0 10px 0;">' +
                 '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
                     '<span>فاصل السوق (min):</span>' +
-                    '<input type="number" id="alg-market-interval" value="' + get('marketInterval') + '" style="width:62px;border:1px solid #c1a264;background:#fff;text-align:center;padding:2px 3px;border-radius:3px;">' +
+                    '<input type="number" id="alg-market-interval" value="' + get('marketInterval') + '" style="width:90px;border:1px solid #c1a264;background:#fff;text-align:center;padding:3px 5px;border-radius:3px;font-size:13px;">' +
                 '</div>' +
 
                 // تفعيل الجدولة
