@@ -7,6 +7,10 @@
 // @match        https://*.tribalwars.ae/game.php?*screen=snob*
 // @match        https://*.tribalwars.ae/game.php?*screen=market*mode=call*
 // @match        https://*.tribalwars.ae/game.php?*mode=call*screen=market*
+// @match        https://*.tribalwars.net/game.php?*screen=snob*
+// @match        https://*.tribalwars.net/game.php?*screen=market*mode=call*
+// @match        https://*.tribalwars.pt/game.php?*screen=snob*
+// @match        https://*.tribalwars.pt/game.php?*screen=market*mode=call*
 // @icon         https://files.manuscdn.com/user_upload_by_module/session_file/310419663029215752/GYTOxdyXXZqmFprq.jpg
 // @connect      raw.githubusercontent.com
 // @connect      api.telegram.org
