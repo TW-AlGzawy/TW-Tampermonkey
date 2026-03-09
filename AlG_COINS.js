@@ -439,7 +439,10 @@
     async function doAcademy() {
         var coins = document.querySelector('#coin_mint_fill_max')
                  || document.querySelector('.coin_mint_fill_max');
-        if (!coins) { console.warn('[AlGzawy] زر العملات غير موجود في الأكاديمية'); return false; }
+        if (!coins) {
+            console.warn('[AlGzawy] زر العملات غير موجود — تخطي الأكاديمية والانتقال للخطوة التالية');
+            return true;
+        }
         coins.click();
         await sleep(rand(300, 800));
         var submit = document.querySelector('input.btn.btn-default')
