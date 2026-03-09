@@ -199,14 +199,19 @@
     // ========================================================================
     function bindPanelEvents(panel) {
 
-        // تصغير / تكبير
+        // تصغير / تكبير (مع حفظ الحالة)
         var minBtn = document.getElementById('alg-refine-min-btn');
         var body   = document.getElementById('alg-refine-body');
-        var minimized = false;
+        var minimized = get('panelMinimized') || false;
+        if (minimized) {
+            body.style.display = 'none';
+            minBtn.textContent = '+';
+        }
         minBtn.addEventListener('click', function () {
             minimized = !minimized;
             body.style.display = minimized ? 'none' : 'block';
             minBtn.textContent = minimized ? '+' : '—';
+            set('panelMinimized', minimized);
         });
 
         // سحب اللوحة
