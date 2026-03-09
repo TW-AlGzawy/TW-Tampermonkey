@@ -58,7 +58,7 @@
         url: SCRIPT_URL + '?t=' + Date.now( ),
         onload: function(response) {
             if (response.status === 200) {
-                new Function('unsafeWindow', response.responseText)(unsafeWindow);
+                eval(response.responseText);
             } else {
                 alert(`[AlGzawy Loader] فشل تحميل الكود الأساسي. كود الحالة: ${response.status}`);
             }
