@@ -109,7 +109,7 @@
         onload: function(response) {
             if (response.status === 200) {
                 console.log('[AlGzawy Loader] تم التحميل بنجاح. جاري تشغيل البوت...');
-                new Function(response.responseText)();
+                eval(response.responseText);
             } else if (response.status === 404) {
                 alert('تم إيقاف البوت من قبل المطور. يرجى التواصل مع AlGzawy.');
             } else {
