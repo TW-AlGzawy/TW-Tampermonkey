@@ -11,6 +11,8 @@
 // @grant        GM_getValue
 // @grant        GM_xmlhttpRequest
 // @grant        GM_info
+// @connect      raw.githubusercontent.com
+// @connect      github.com
 // @updateURL    https://github.com/TW-AlGzawy/TW-Tampermonkey/raw/main/loader.AlG_scavenge.user.js
 // @downloadURL  https://github.com/TW-AlGzawy/TW-Tampermonkey/raw/main/loader.AlG_scavenge.user.js
 // ==/UserScript==
@@ -21,8 +23,8 @@
     // ========================================================================
     // رابط الكود الأساسي المشفّر
     // ========================================================================
-    const MAIN_SCRIPT_URL = 'https://github.com/TW-AlGzawy/TW-Tampermonkey/raw/main/AlG_scavenge.js';
-    const UPDATE_URL = GM_info.script.updateURL || '';
+    const MAIN_SCRIPT_URL = 'https://raw.githubusercontent.com/TW-AlGzawy/TW-Tampermonkey/main/AlG_scavenge.js';
+    const UPDATE_URL = (typeof GM_info !== 'undefined' && GM_info.script && GM_info.script.updateURL) ? GM_info.script.updateURL : '';
 
     // ========================================================================
     // استرجاع الإعدادات المحفوظة
@@ -74,7 +76,7 @@
 
                     <div id="update-section" style="border-top: 1px solid #c1a264; padding-top: 10px; margin-top: 10px;">
                         <button id="check-update-btn" class="btn" style="background: none; border: none; color: #007bff; cursor: pointer; text-decoration: underline; padding: 0;">التحقق من التحديثات</button>
-                        <span style="font-size: 11px; color: #542e0a; display: block; margin-top: 5px;">الإصدار: ${GM_info.script.version}</span>
+                        <span style="font-size: 11px; color: #542e0a; display: block; margin-top: 5px;">الإصدار: ${(typeof GM_info !== 'undefined' && GM_info.script) ? GM_info.script.version : '9.2'}</span>
                     </div>
                     <p style="font-size: 10px; color: #7d510f; margin: 10px 0 0 0;">&copy; الحقوق محفوظة / AlGzawy</p>
                 </div>
@@ -137,64 +139,84 @@
                 alert('رابط التحديث غير محدد في إعدادات السكربت.');
                 return;
             }
-            $(this).text('جاري البحث...');
-            GM_xmlhttpRequest({
-                method: 'GET',
-                url: UPDATE_URL + '?t=' + Date.now(),
-                onload: function (response) {
-                    if (response.status === 200) {
-                        const newVersionMatch = response.responseText.match(/@version\s+([0-9.]+)/);
-                        if (newVersionMatch && newVersionMatch[1]) {
-                            const newVersion = newVersionMatch[1];
-                            if (newVersion > GM_info.script.version) {
-                                alert(`تحديث جديد متوفر!\n\nالإصدار الحالي: ${GM_info.script.version}\nالإصدار الجديد: ${newVersion}\n\nيرجى تحديث السكربت.`);
-                                $('#check-update-btn').text('يوجد تحديث!').css('color', 'red');
-                            } else {
-                                alert('أنت تستخدم أحدث إصدار بالفعل.');
-                                $('#check-update-btn').text('التحقق من التحديثات');
-                            }
+            const $btn = $(this);
+            const currentVersion = (typeof GM_info !== 'undefined' && GM_info.script) ? GM_info.script.version : '9.2';
+            $btn.text('جاري البحث...');
+
+            fetch(UPDATE_URL + '?t=' + Date.now())
+                .then(function (res) {
+                    if (!res.ok) throw new Error('HTTP ' + res.status);
+                    return res.text();
+                })
+                .then(function (text) {
+                    const match = text.match(/@version\s+([0-9.]+)/);
+                    if (match && match[1]) {
+                        if (match[1] > currentVersion) {
+                            alert('تحديث جديد متوفر!\n\nالإصدار الحالي: ' + currentVersion + '\nالإصدار الجديد: ' + match[1] + '\n\nيرجى تحديث السكربت.');
+                            $btn.text('يوجد تحديث!').css('color', 'red');
                         } else {
-                            alert('لم يتم العثور على رقم الإصدار.');
-                            $('#check-update-btn').text('خطأ في القراءة');
+                            alert('أنت تستخدم أحدث إصدار بالفعل.');
+                            $btn.text('التحقق من التحديثات');
                         }
                     } else {
-                        alert('فشل الاتصال بخادم التحديثات.');
-                        $('#check-update-btn').text('التحقق من التحديثات');
+                        alert('لم يتم العثور على رقم الإصدار.');
+                        $btn.text('خطأ في القراءة');
                     }
-                },
-                onerror: function () {
+                })
+                .catch(function () {
                     alert('خطأ في الشبكة أثناء التحقق من التحديث.');
-                    $('#check-update-btn').text('التحقق من التحديثات');
-                }
-            });
+                    $btn.text('التحقق من التحديثات');
+                });
         });
 
         updateButtonState();
     }
 
     // ========================================================================
-    // تحميل وتنفيذ الكود الأساسي في سياق Tampermonkey (eval)
+    // تحميل وتنفيذ الكود الأساسي (fetch أولاً، ثم GM_xmlhttpRequest كبديل)
     // ========================================================================
+    function executeCode(code) {
+        try {
+            // eslint-disable-next-line no-new-func
+            (new Function(code))();
+            console.log('[AlGzawy Loader] تم تحميل الكود الأساسي بنجاح.');
+        } catch (e) {
+            console.error('[AlGzawy Loader] خطأ أثناء تنفيذ الكود الأساسي:', e);
+        }
+    }
+
     function loadMainScript() {
-        GM_xmlhttpRequest({
-            method: 'GET',
-            url: MAIN_SCRIPT_URL + '?t=' + Date.now(),
-            onload: function (response) {
-                if (response.status === 200) {
-                    try {
-                        eval(response.responseText);
-                        console.log('[AlGzawy Loader] تم تحميل الكود الأساسي بنجاح.');
-                    } catch (e) {
-                        console.error('[AlGzawy Loader] خطأ أثناء تنفيذ الكود الأساسي:', e);
-                    }
-                } else {
-                    console.error('[AlGzawy Loader] فشل تحميل الكود الأساسي. كود الحالة:', response.status);
+        const url = MAIN_SCRIPT_URL + '?t=' + Date.now();
+
+        fetch(url)
+            .then(function (res) {
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                return res.text();
+            })
+            .then(function (code) {
+                executeCode(code);
+            })
+            .catch(function (fetchErr) {
+                console.warn('[AlGzawy Loader] fetch فشل، جاري المحاولة بـ GM_xmlhttpRequest...', fetchErr);
+                if (typeof GM_xmlhttpRequest === 'undefined') {
+                    console.error('[AlGzawy Loader] GM_xmlhttpRequest غير متاح أيضاً.');
+                    return;
                 }
-            },
-            onerror: function () {
-                console.error('[AlGzawy Loader] خطأ في الشبكة أثناء تحميل الكود الأساسي.');
-            }
-        });
+                GM_xmlhttpRequest({
+                    method: 'GET',
+                    url: url,
+                    onload: function (response) {
+                        if (response.status === 200) {
+                            executeCode(response.responseText);
+                        } else {
+                            console.error('[AlGzawy Loader] فشل تحميل الكود الأساسي. كود الحالة:', response.status);
+                        }
+                    },
+                    onerror: function () {
+                        console.error('[AlGzawy Loader] خطأ في الشبكة أثناء تحميل الكود الأساسي.');
+                    }
+                });
+            });
     }
 
     // ========================================================================
