@@ -7,7 +7,9 @@
     var isRunning = !!S.isRunning;
     var switchTimer = null;
     var countdownTimer = null;
+    var botMonitor = null;
     var statusEl = null;
+    var lastBotAlert = 0;
 
     function getS(key, def) {
         var v = S[key];
@@ -61,8 +63,8 @@
         var tpl = getS('template', 'A');
         var minD = getS('minDelay', 200);
         var maxD = getS('maxDelay', 300);
-        var swt = getS('switchDelay', 30);
-        var ref = getS('refresh', 10);
+        var swt = getS('switchDelay', 30000);
+        var ref = getS('refresh', 600000);
         var pgs = getS('pagesToFarm', 0);
 
         var panel = document.createElement('div');
@@ -98,13 +100,13 @@
                         '<input id="alg-f-maxd" type="number" min="50" value="' + maxD + '" placeholder="300" style="' + inputStyle + 'width:50%;">' +
                     '</div>' +
                 '</div>' +
-                row('تنقل (s)', '<input id="alg-f-swt" type="number" min="5" value="' + swt + '" style="' + inputStyle + 'width:100%;">') +
-                row('تحديث (min)', '<input id="alg-f-ref" type="number" min="1" value="' + ref + '" style="' + inputStyle + 'width:100%;">') +
+                row('تنقل (ms)', '<input id="alg-f-swt" type="number" min="1000" value="' + swt + '" style="' + inputStyle + 'width:100%;">') +
+                row('تحديث (ms)', '<input id="alg-f-ref" type="number" min="10000" value="' + ref + '" style="' + inputStyle + 'width:100%;">') +
                 row('عدد الصفحات', '<input id="alg-f-pgs" type="number" min="0" value="' + pgs + '" style="' + inputStyle + 'width:100%;">') +
                 '<button id="alg-f-save" style="' + btnStyle + 'background:#7a5c2a;margin-bottom:6px;">حفظ</button>' +
                 '<button id="alg-f-run" style="' + btnStyle + 'background:' + (isRunning ? '#c0392b' : '#27ae60') + ';font-size:14px;margin-bottom:4px;">' + (isRunning ? 'إيقاف' : 'تشغيل') + '</button>' +
                 '<div id="alg-f-status" style="margin-top:6px;font-size:11px;color:#542e0a;text-align:center;min-height:16px;">' + (isRunning ? 'جاري العمل...' : 'متوقف') + '</div>' +
-                '<div style="text-align:center;margin-top:8px;font-size:10px;color:#7a5c2a;border-top:1px solid #c1a264;padding-top:6px;">AlGzawy • الإصدار 1.0</div>' +
+                '<div style="text-align:center;margin-top:8px;font-size:10px;color:#7a5c2a;border-top:1px solid #c1a264;padding-top:6px;">AlGzawy • الإصدار 1.1</div>' +
             '</div>';
 
         document.body.appendChild(panel);
@@ -123,6 +125,8 @@
         document.getElementById('alg-f-save').onclick = saveSettings;
         document.getElementById('alg-f-run').onclick = toggleBot;
 
+        startBotMonitor();
+
         if (isRunning) startBot();
     }
 
@@ -130,8 +134,8 @@
         saveS('template', document.getElementById('alg-f-tpl').value);
         saveS('minDelay', parseInt(document.getElementById('alg-f-mind').value) || 200);
         saveS('maxDelay', parseInt(document.getElementById('alg-f-maxd').value) || 300);
-        saveS('switchDelay', parseInt(document.getElementById('alg-f-swt').value) || 30);
-        saveS('refresh', parseInt(document.getElementById('alg-f-ref').value) || 10);
+        saveS('switchDelay', parseInt(document.getElementById('alg-f-swt').value) || 30000);
+        saveS('refresh', parseInt(document.getElementById('alg-f-ref').value) || 600000);
         saveS('pagesToFarm', parseInt(document.getElementById('alg-f-pgs').value) || 0);
         setStatus('تم الحفظ ✓');
         setTimeout(function () { setStatus(isRunning ? 'جاري العمل...' : 'متوقف'); }, 1500);
@@ -169,6 +173,67 @@
         if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
     }
 
+    // ===================== BOT PROTECTION =====================
+    function playAlertSound() {
+        try {
+            var ctx = new (window.AudioContext || window.webkitAudioContext)();
+            function beep(freq, start, dur) {
+                var o = ctx.createOscillator();
+                var g = ctx.createGain();
+                o.connect(g);
+                g.connect(ctx.destination);
+                o.frequency.value = freq;
+                o.type = 'square';
+                g.gain.setValueAtTime(0.3, ctx.currentTime + start);
+                g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur);
+                o.start(ctx.currentTime + start);
+                o.stop(ctx.currentTime + start + dur + 0.05);
+            }
+            beep(880, 0.0, 0.18);
+            beep(660, 0.2, 0.18);
+            beep(880, 0.4, 0.18);
+            beep(660, 0.6, 0.18);
+            beep(440, 0.8, 0.35);
+        } catch (e) {}
+    }
+
+    function fireBotAlert() {
+        var now = Date.now();
+        if (now - lastBotAlert < 10000) return;
+        lastBotAlert = now;
+
+        isRunning = false;
+        saveS('isRunning', false);
+        clearTimers();
+
+        var btn = document.getElementById('alg-f-run');
+        if (btn) { btn.textContent = 'تشغيل'; btn.style.background = '#27ae60'; }
+        setStatus('⚠ تم اكتشاف حماية البوت!');
+
+        playAlertSound();
+
+        var panel = document.getElementById('alg-farm-panel');
+        if (panel) {
+            panel.style.border = '3px solid red';
+            setTimeout(function () { panel.style.border = '2px solid #8b6914'; }, 5000);
+        }
+    }
+
+    function startBotMonitor() {
+        if (botMonitor) clearInterval(botMonitor);
+        botMonitor = setInterval(function () {
+            if (
+                document.getElementById('botprotection_quest') ||
+                document.querySelector('.bot-protection-row') ||
+                document.querySelector('#botprotection') ||
+                (document.body && document.body.innerHTML.indexOf('bot_check') !== -1)
+            ) {
+                fireBotAlert();
+            }
+        }, 2000);
+    }
+
+    // ===================== FARM LOGIC =====================
     function farmRows() {
         var tpl = getS('template', 'A').toLowerCase();
         var minD = getS('minDelay', 200);
@@ -196,6 +261,7 @@
             cumDelay += delay;
             (function (r, d) {
                 setTimeout(function () {
+                    if (!isRunning) return;
                     var btn = r.querySelector('.farm_icon_' + tpl);
                     if (btn) btn.click();
                 }, d);
@@ -204,15 +270,14 @@
 
         setTimeout(function () {
             if (isRunning) scheduleNavigation();
-        }, cumDelay + 400);
+        }, cumDelay + 200);
     }
 
     function scheduleNavigation() {
         clearTimers();
-        var swtSec = getS('switchDelay', 30);
-        var swtMs = swtSec * 1000;
-        var jitter = Math.floor(swtMs * 0.1 * (2 * Math.random() - 1));
-        var finalMs = Math.max(3000, swtMs + jitter);
+        var swtMs = getS('switchDelay', 30000);
+        var jitter = Math.floor(swtMs * 0.05 * (2 * Math.random() - 1));
+        var finalMs = Math.max(1000, swtMs + jitter);
 
         var remaining = Math.ceil(finalMs / 1000);
         setStatus('تنقل بعد ' + remaining + ' ث...');
@@ -271,9 +336,9 @@
             setStatus('الانتقال للقرية التالية...');
             location.href = switchRight.getAttribute('href');
         } else {
-            var refMin = getS('refresh', 10);
-            var refMs = refMin * 60 * 1000;
-            setStatus('تحديث بعد ' + refMin + ' د...');
+            var refMs = getS('refresh', 600000);
+            var refSec = Math.ceil(refMs / 1000);
+            setStatus('تحديث بعد ' + refSec + ' ث...');
             switchTimer = setTimeout(function () {
                 location.reload();
             }, refMs);
