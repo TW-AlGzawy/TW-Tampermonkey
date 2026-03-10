@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         AlGzawy - Farm Bot النهب [v1.5]
+// @name         AlGzawy - Farm Bot النهب [v1.6]
 // @namespace    AlGzawy-Scripts-farm-loader
-// @version      1.5
+// @version      1.6
 // @description  يقوم بتحميل وتشغيل بوت النهب الآمن من AlGzawy
 // @author       AlGzawy
 // @include      https://*.tribalwars.*/game.php?*screen=am_farm*
@@ -29,8 +29,8 @@
         template: 'A',
         minDelay: 200,
         maxDelay: 300,
-        switchDelay: 30,
-        refresh: 10,
+        switchDelay: 30000,
+        refresh: 600000,
         pagesToFarm: 0,
         isRunning: false,
         panelTop: '150px',
