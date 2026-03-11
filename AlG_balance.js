@@ -599,36 +599,7 @@ function buildTable(list_launches,obj_stats,list_production,list_clusters_stats)
 
     // Send All button
     document.getElementById('alg-send-all-btn').onclick=function(){
-        var allBtns=$('.alg-SEND-BTN:not(:disabled)');
-        if(allBtns.length===0)return;
-        var btn=this;
-        btn.disabled=true;
-        btn.style.opacity='0.6';
-        var statusEl=document.getElementById('alg-send-all-status');
-        var total=allBtns.length,sent=0;
-        statusEl.textContent='0 / '+total;
-        function sendNext(idx){
-            if(idx>=allBtns.length){
-                statusEl.textContent='تم إرسال '+sent+' طلب';
-                btn.disabled=false;
-                btn.style.opacity='1';
-                return;
-            }
-            var b=allBtns[idx];
-            if(!b||$(b).closest('tr').length===0){sendNext(idx+1);return;}
-            var row=$(b).data('row');
-            var tid=$(b).data('tid');
-            var res;
-            try{res=JSON.parse($(b).attr('data-res'));}catch(e){sendNext(idx+1);return;}
-            sendResources(tid,res);
-            sent++;
-            statusEl.textContent=sent+' / '+total;
-            window.setTimeout(function(){
-                $('#alg-row-'+row).remove();
-                sendNext(idx+1);
-            },400);
-        }
-        sendNext(0);
+        autoSendAll(null,false);
     };
 
     // Enter key
@@ -776,6 +747,47 @@ function setMiniStatus(msg){
     if(el)el.textContent=msg;
 }
 
+function autoSendAll(onComplete,closeAfter){
+    var allBtns=$('.alg-SEND-BTN:not(:disabled)');
+    var total=allBtns.length,sent=0;
+    var sendBtn=document.getElementById('alg-send-all-btn');
+    var statusEl=document.getElementById('alg-send-all-status');
+    if(total===0){if(onComplete)onComplete();return;}
+    if(sendBtn){sendBtn.disabled=true;sendBtn.style.opacity='0.6';}
+    if(statusEl)statusEl.textContent='0 / '+total;
+    function sendNext(idx){
+        if(idx>=total){
+            if(statusEl)statusEl.textContent='تم إرسال '+sent+' طلب';
+            if(sendBtn){sendBtn.disabled=false;sendBtn.style.opacity='1';}
+            if(closeAfter){
+                window.setTimeout(function(){
+                    var w=document.getElementById('alg-window');
+                    if(w)w.parentNode.removeChild(w);
+                    setMiniStatus('اكتمل ✓');
+                    if(onComplete)onComplete();
+                },600);
+            } else {
+                if(onComplete)onComplete();
+            }
+            return;
+        }
+        var b=allBtns[idx];
+        if(!b||$(b).closest('tr').length===0){sendNext(idx+1);return;}
+        var row=$(b).data('row');
+        var tid=$(b).data('tid');
+        var res;
+        try{res=JSON.parse($(b).attr('data-res'));}catch(e){sendNext(idx+1);return;}
+        sendResources(tid,res);
+        sent++;
+        if(statusEl)statusEl.textContent=sent+' / '+total;
+        window.setTimeout(function(){
+            $('#alg-row-'+row).remove();
+            sendNext(idx+1);
+        },400);
+    }
+    sendNext(0);
+}
+
 function stopAutoRun(){
     if(autoTimer){clearTimeout(autoTimer);autoTimer=null;}
     if(countdownTimer){clearInterval(countdownTimer);countdownTimer=null;}
@@ -784,12 +796,25 @@ function stopAutoRun(){
 function startAutoRun(intervalSec){
     stopAutoRun();
     function runCycle(){
-        setMiniStatus('جاري الموازنة...');
-        balancingResources().then(function(){
-            scheduleNext(intervalSec);
-        }).catch(function(){
-            scheduleNext(intervalSec);
-        });
+        setMiniStatus('جاري تحضير النافذة...');
+        createMainInterface();
+        window.setTimeout(function(){
+            setMiniStatus('جاري الموازنة...');
+            balancingResources().then(function(){
+                setMiniStatus('جاري الإرسال...');
+                window.setTimeout(function(){
+                    autoSendAll(function(){
+                        scheduleNext(intervalSec);
+                    },true);
+                },500);
+            }).catch(function(e){
+                console.error('[AlGzawy Balance] خطأ في الموازنة التلقائية:',e);
+                var w=document.getElementById('alg-window');
+                if(w)w.parentNode.removeChild(w);
+                setMiniStatus('خطأ - سيعاد المحاولة');
+                scheduleNext(intervalSec);
+            });
+        },800);
     }
     function scheduleNext(sec){
         var end=Date.now()+sec*1000;
