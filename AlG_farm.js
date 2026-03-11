@@ -295,15 +295,22 @@
     }
 
     function chooseTemplate(tr, defaultTpl) {
+        var d = defaultTpl.toLowerCase();
         var wallLevel = parseWallLevel(tr);
-        var maxWallA = getS('maxWallForA', 5);
-        var minWallB = getS('minWallForB', 0);
 
-        if (wallLevel === -1) return defaultTpl.toLowerCase();
+        if (wallLevel === -1) return d;
+
+        var maxWallA = getS('maxWallForA', 5);
+        var minWallB = getS('minWallForB', 6);
 
         if (wallLevel <= maxWallA && tr.querySelector('.farm_icon_a')) return 'a';
-        if (wallLevel >= minWallB && tr.querySelector('.farm_icon_b')) return 'b';
-        return defaultTpl.toLowerCase();
+        if (minWallB > 0 && wallLevel >= minWallB && tr.querySelector('.farm_icon_b')) return 'b';
+
+        if (tr.querySelector('.farm_icon_' + d)) return d;
+        if (tr.querySelector('.farm_icon_a')) return 'a';
+        if (tr.querySelector('.farm_icon_b')) return 'b';
+        if (tr.querySelector('.farm_icon_c')) return 'c';
+        return d;
     }
 
     // ===================== FARM LOGIC =====================
