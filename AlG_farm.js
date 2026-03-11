@@ -359,15 +359,20 @@
         var wallLevel = parseWallLevel(tr);
         var maxWallA = getS('maxWallForA', 5);
         var minWallB = getS('minWallForB', 6);
+        var hasA = !!tr.querySelector('.farm_icon_a');
+        var hasB = !!tr.querySelector('.farm_icon_b');
+        var hasC = !!tr.querySelector('.farm_icon_c');
+        console.log('[AlG-Merge] wall=' + wallLevel + ' maxWallA=' + maxWallA + ' minWallB=' + minWallB + ' useA=' + useA + ' useB=' + useB + ' useC=' + useC + ' hasA=' + hasA + ' hasB=' + hasB + ' hasC=' + hasC);
 
         // Wall-based rules
-        if (useA && wallLevel !== -1 && wallLevel <= maxWallA && tr.querySelector('.farm_icon_a')) return 'a';
-        if (useB && minWallB > 0 && wallLevel !== -1 && wallLevel >= minWallB && tr.querySelector('.farm_icon_b')) return 'b';
+        if (useA && wallLevel !== -1 && wallLevel <= maxWallA && hasA) { console.log('[AlG-Merge] → A (wall rule)'); return 'a'; }
+        if (useB && minWallB > 0 && wallLevel !== -1 && wallLevel >= minWallB && hasB) { console.log('[AlG-Merge] → B (wall rule)'); return 'b'; }
 
         // Fallback: A → B → C
-        if (useA && tr.querySelector('.farm_icon_a')) return 'a';
-        if (useB && tr.querySelector('.farm_icon_b')) return 'b';
-        if (useC && tr.querySelector('.farm_icon_c')) return 'c';
+        if (useA && hasA) { console.log('[AlG-Merge] → A (fallback)'); return 'a'; }
+        if (useB && hasB) { console.log('[AlG-Merge] → B (fallback)'); return 'b'; }
+        if (useC && hasC) { console.log('[AlG-Merge] → C (fallback)'); return 'c'; }
+        console.log('[AlG-Merge] → null (no match)');
         return null;
     }
 
@@ -381,6 +386,7 @@
         var mergeB = getS('mergeB', false);
         var mergeC = getS('mergeC', false);
 
+        console.log('[AlG-Farm] farmRows mergeEnabled=' + mergeEnabled + ' mergeA=' + mergeA + ' mergeB=' + mergeB + ' mergeC=' + mergeC);
         var allRows = document.querySelectorAll('#plunder_list tbody tr');
         var targets = [];
         var skippedRefarm = 0;
