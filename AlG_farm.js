@@ -397,7 +397,7 @@
             var villageId = getVillageId(tr);
             if (villageId && shouldSkipRefarm(villageId)) { skippedRefarm++; continue; }
 
-            if (mergeEnabled) {
+            if (mergeEnabled && (mergeA || mergeB || mergeC)) {
                 var tpl = chooseMergeTemplate(tr, mergeA, mergeB, mergeC);
                 if (!tpl) continue;
                 targets.push({ tr: tr, tpl: tpl, villageId: villageId });
