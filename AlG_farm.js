@@ -360,11 +360,11 @@
         var maxWallA = getS('maxWallForA', 5);
         var minWallB = getS('minWallForB', 6);
 
-        // Wall-based rules (only when thresholds are set)
-        if (useA && maxWallA > 0 && wallLevel !== -1 && wallLevel <= maxWallA && tr.querySelector('.farm_icon_a')) return 'a';
+        // Wall-based rules
+        if (useA && wallLevel !== -1 && wallLevel <= maxWallA && tr.querySelector('.farm_icon_a')) return 'a';
         if (useB && minWallB > 0 && wallLevel !== -1 && wallLevel >= minWallB && tr.querySelector('.farm_icon_b')) return 'b';
 
-        // Fallback: first available enabled template (A → B → C)
+        // Fallback: A → B → C
         if (useA && tr.querySelector('.farm_icon_a')) return 'a';
         if (useB && tr.querySelector('.farm_icon_b')) return 'b';
         if (useC && tr.querySelector('.farm_icon_c')) return 'c';
