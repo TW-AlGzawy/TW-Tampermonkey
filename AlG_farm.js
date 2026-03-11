@@ -15,12 +15,14 @@
     var CARRY = { lc: 80, hc: 50, spear: 25, sword: 25, axe: 25, ram: 0, catapult: 0 };
 
     function getS(key, def) {
+        var stored = GM_getValue('algzawy_farm_bot_' + key, undefined);
+        if (stored !== undefined && stored !== null) return stored;
         var v = S[key];
         return (v !== undefined && v !== null) ? v : def;
     }
 
     function saveS(key, val) {
-        S.save(key, val);
+        GM_setValue('algzawy_farm_bot_' + key, val);
         S[key] = val;
     }
 
