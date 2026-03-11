@@ -4,6 +4,7 @@
     var S = unsafeWindow.ALGZAWY_SETTINGS;
     var PAGE_IDX_KEY = 'alg_farm_pageIdx';
     var LAST_ATTACK_PREFIX = 'alg_farm_lastAttack_';
+    var ATTACK_COUNT_PREFIX = 'alg_farm_attackCount_';
 
     var isRunning = !!S.isRunning;
     var switchTimer = null;
@@ -11,6 +12,9 @@
     var botMonitor = null;
     var statusEl = null;
     var lastBotAlert = 0;
+    var sessionAttackA = parseInt(sessionStorage.getItem('alg_farm_session_A') || '0');
+    var sessionAttackB = parseInt(sessionStorage.getItem('alg_farm_session_B') || '0');
+    var sessionAttackC = parseInt(sessionStorage.getItem('alg_farm_session_C') || '0');
 
     var CARRY = { lc: 80, hc: 50, spear: 25, sword: 25, axe: 25, ram: 0, catapult: 0 };
 
@@ -74,6 +78,13 @@
         var maxWallA = getS('maxWallForA', 5);
         var maxWallB = getS('maxWallForB', 0);
         var refarmDelay = getS('refarmDelay', 7200000);
+        var skipAttacked = getS('skipAttacked', true);
+        var maxAttacksEnabled = getS('maxAttacksEnabled', false);
+        var maxAttacksPerVillage = getS('maxAttacksPerVillage', 10);
+        var minResWood = getS('minResWood', 0);
+        var minResStone = getS('minResStone', 0);
+        var minResIron = getS('minResIron', 0);
+        var maxDistance = getS('maxDistance', 0);
         var mergeEnabled = getS('mergeEnabled', false);
         var mergeA = getS('mergeA', false);
         var mergeB = getS('mergeB', false);
@@ -119,6 +130,10 @@
                 row('حائط A ≤', '<input id="alg-f-maxwalla" type="number" min="0" max="20" value="' + maxWallA + '" style="' + inputStyle + 'width:100%;" title="استخدم القالب A إذا كان مستوى الحائط أقل من أو يساوي هذه القيمة">') +
                 row('حائط B ≤', '<input id="alg-f-maxwallb" type="number" min="0" max="20" value="' + maxWallB + '" style="' + inputStyle + 'width:100%;" title="استخدم القالب B إذا كان مستوى الحائط أقل من أو يساوي هذه القيمة">') +
                 row('إعادة نهب بعد (ms)', '<input id="alg-f-refarm" type="number" min="0" value="' + refarmDelay + '" style="' + inputStyle + 'width:100%;" title="0 = بدون قيد. مدة الانتظار قبل إعادة نهب نفس القرية">') +
+                '<div style="margin-bottom:6px;"><label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="alg-f-skipattacked" ' + (skipAttacked ? 'checked' : '') + ' style="width:16px;height:16px;cursor:pointer;"><span style="font-weight:bold;">تخطي القرى تحت هجوم</span></label></div>' +
+                '<div style="margin-bottom:6px;"><label style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:4px;"><input type="checkbox" id="alg-f-maxattena" ' + (maxAttacksEnabled ? 'checked' : '') + ' style="width:16px;height:16px;cursor:pointer;"><span style="font-weight:bold;">حد هجمات/قرية</span></label><input id="alg-f-maxatt" type="number" min="1" value="' + maxAttacksPerVillage + '" style="' + inputStyle + 'width:100%;"></div>' +
+                '<div style="margin-bottom:6px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">حد أدنى موارد C</label><div style="display:flex;gap:4px;"><input id="alg-f-minwood" type="number" min="0" value="' + minResWood + '" placeholder="خشب" style="' + inputStyle + 'width:33%;"><input id="alg-f-minstone" type="number" min="0" value="' + minResStone + '" placeholder="طمي" style="' + inputStyle + 'width:33%;"><input id="alg-f-miniron" type="number" min="0" value="' + minResIron + '" placeholder="حديد" style="' + inputStyle + 'width:33%;"></div></div>' +
+                row('أقصى مسافة (0=بلا حد)', '<input id="alg-f-maxdist" type="number" min="0" value="' + maxDistance + '" style="' + inputStyle + 'width:100%;">') +
                 '<div style="border-top:1px solid #c1a264;margin:8px 0 6px;padding-top:6px;">' +
                     '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:bold;color:#5c2d0a;">' +
                         '<input type="checkbox" id="alg-f-merge" ' + (mergeEnabled ? 'checked' : '') + ' style="width:16px;height:16px;cursor:pointer;">' +
@@ -142,7 +157,11 @@
                 '<button id="alg-f-save" style="' + btnStyle + 'background:#7a5c2a;margin-bottom:6px;">حفظ</button>' +
                 '<button id="alg-f-run" style="' + btnStyle + 'background:' + (isRunning ? '#c0392b' : '#27ae60') + ';font-size:14px;margin-bottom:4px;">' + (isRunning ? 'إيقاف' : 'تشغيل') + '</button>' +
                 '<div id="alg-f-status" style="margin-top:6px;font-size:11px;color:#542e0a;text-align:center;min-height:16px;">' + (isRunning ? 'جاري العمل...' : 'متوقف') + '</div>' +
-                '<div style="text-align:center;margin-top:8px;font-size:10px;color:#7a5c2a;border-top:1px solid #c1a264;padding-top:6px;">AlGzawy • الإصدار 2.3 ذكي</div>' +
+                '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;border-top:1px solid #c1a264;padding-top:6px;">' +
+                    '<span id="alg-f-counters" style="font-size:11px;color:#542e0a;">A: ' + sessionAttackA + ' | B: ' + sessionAttackB + ' | C: ' + sessionAttackC + '</span>' +
+                    '<button id="alg-f-resetcnt" style="background:none;border:none;color:#c0392b;cursor:pointer;font-size:11px;text-decoration:underline;padding:0;">تصفير</button>' +
+                '</div>' +
+                '<div style="text-align:center;margin-top:8px;font-size:10px;color:#7a5c2a;border-top:1px solid #c1a264;padding-top:6px;">AlGzawy • الإصدار 3.0 ذكي</div>' +
             '</div>';
 
         document.body.appendChild(panel);
@@ -150,6 +169,14 @@
 
         document.getElementById('alg-f-merge').onchange = function () {
             document.getElementById('alg-f-merge-opts').style.display = this.checked ? 'block' : 'none';
+        };
+
+        document.getElementById('alg-f-resetcnt').onclick = function () {
+            sessionAttackA = 0; sessionAttackB = 0; sessionAttackC = 0;
+            sessionStorage.removeItem('alg_farm_session_A');
+            sessionStorage.removeItem('alg_farm_session_B');
+            sessionStorage.removeItem('alg_farm_session_C');
+            updateCountersUI();
         };
 
         makeDraggable(panel, document.getElementById('alg-farm-hdr'));
@@ -180,6 +207,13 @@
         saveS('maxWallForA', parseInt(document.getElementById('alg-f-maxwalla').value));
         saveS('maxWallForB', parseInt(document.getElementById('alg-f-maxwallb').value));
         saveS('refarmDelay', parseInt(document.getElementById('alg-f-refarm').value) || 0);
+        saveS('skipAttacked', document.getElementById('alg-f-skipattacked').checked);
+        saveS('maxAttacksEnabled', document.getElementById('alg-f-maxattena').checked);
+        saveS('maxAttacksPerVillage', parseInt(document.getElementById('alg-f-maxatt').value) || 10);
+        saveS('minResWood', parseInt(document.getElementById('alg-f-minwood').value) || 0);
+        saveS('minResStone', parseInt(document.getElementById('alg-f-minstone').value) || 0);
+        saveS('minResIron', parseInt(document.getElementById('alg-f-miniron').value) || 0);
+        saveS('maxDistance', parseInt(document.getElementById('alg-f-maxdist').value) || 0);
         saveS('mergeEnabled', document.getElementById('alg-f-merge').checked);
         saveS('mergeA', document.getElementById('alg-f-merge-a').checked);
         saveS('mergeB', document.getElementById('alg-f-merge-b').checked);
@@ -207,9 +241,14 @@
         var toRemove = [];
         for (var i = 0; i < sessionStorage.length; i++) {
             var k = sessionStorage.key(i);
-            if (k && k.indexOf(LAST_ATTACK_PREFIX) === 0) toRemove.push(k);
+            if (k && (k.indexOf(LAST_ATTACK_PREFIX) === 0 || k.indexOf(ATTACK_COUNT_PREFIX) === 0)) toRemove.push(k);
         }
         toRemove.forEach(function (k) { sessionStorage.removeItem(k); });
+        sessionAttackA = 0; sessionAttackB = 0; sessionAttackC = 0;
+        sessionStorage.removeItem('alg_farm_session_A');
+        sessionStorage.removeItem('alg_farm_session_B');
+        sessionStorage.removeItem('alg_farm_session_C');
+        updateCountersUI();
 
         farmRows();
     }
@@ -304,12 +343,28 @@
     }
 
     function parseResources(tr) {
-        var resSpans = tr.querySelectorAll('span.res');
-        if (resSpans.length < 3) return null;
-        var wood = parseInt(resSpans[0].textContent) || 0;
-        var stone = parseInt(resSpans[1].textContent) || 0;
-        var iron = parseInt(resSpans[2].textContent) || 0;
-        return wood + stone + iron;
+        var td = tr.querySelector('td[colspan="3"]');
+        if (!td) return null;
+        var nowraps = td.querySelectorAll('span.nowrap');
+        if (nowraps.length < 3) return null;
+        var nums = [];
+        for (var i = 0; i < 3; i++) {
+            var numSpan = nowraps[i].querySelector('.res,.warn_90,.warn_100,.warn_75,.warn_50');
+            var txt = numSpan ? numSpan.textContent : nowraps[i].textContent;
+            txt = txt.replace(/\./g, '').replace(/,/g, '').replace(/[^\d]/g, '');
+            nums.push(parseInt(txt) || 0);
+        }
+        return { wood: nums[0], stone: nums[1], iron: nums[2] };
+    }
+
+    function checkMinResForC(tr) {
+        var minWood = getS('minResWood', 0);
+        var minStone = getS('minResStone', 0);
+        var minIron = getS('minResIron', 0);
+        if (!minWood && !minStone && !minIron) return true;
+        var res = parseResources(tr);
+        if (!res) return true;
+        return (res.wood + res.stone + res.iron) >= (minWood + minStone + minIron);
     }
 
     function hasCurrentAttack(tr) {
@@ -330,10 +385,50 @@
         return (Date.now() - lastAttack) < refarmDelay;
     }
 
-    function markAttacked(villageId) {
+    function markAttacked(villageId, tpl) {
         if (villageId) {
             sessionStorage.setItem(LAST_ATTACK_PREFIX + villageId, Date.now().toString());
+            var cnt = parseInt(sessionStorage.getItem(ATTACK_COUNT_PREFIX + villageId) || '0') + 1;
+            sessionStorage.setItem(ATTACK_COUNT_PREFIX + villageId, cnt);
         }
+        if (tpl === 'a') { sessionAttackA++; sessionStorage.setItem('alg_farm_session_A', sessionAttackA); }
+        else if (tpl === 'b') { sessionAttackB++; sessionStorage.setItem('alg_farm_session_B', sessionAttackB); }
+        else if (tpl === 'c') { sessionAttackC++; sessionStorage.setItem('alg_farm_session_C', sessionAttackC); }
+        updateCountersUI();
+    }
+
+    function updateCountersUI() {
+        var el = document.getElementById('alg-f-counters');
+        if (el) el.textContent = 'A: ' + sessionAttackA + ' | B: ' + sessionAttackB + ' | C: ' + sessionAttackC;
+    }
+
+    function shouldSkipMaxAttacks(villageId) {
+        if (!getS('maxAttacksEnabled', false)) return false;
+        var maxA = getS('maxAttacksPerVillage', 10);
+        if (maxA <= 0) return false;
+        return parseInt(sessionStorage.getItem(ATTACK_COUNT_PREFIX + villageId) || '0') >= maxA;
+    }
+
+    function getAttackerCoords() {
+        try {
+            var gd = unsafeWindow.game_data;
+            if (gd && gd.village && gd.village.coord) {
+                var parts = gd.village.coord.split('|');
+                return { x: parseInt(parts[0]), y: parseInt(parts[1]) };
+            }
+        } catch (e) {}
+        return null;
+    }
+
+    function getTargetCoords(tr) {
+        var allText = tr.textContent;
+        var m = allText.match(/(\d{3})\|(\d{3})/);
+        if (m) return { x: parseInt(m[1]), y: parseInt(m[2]) };
+        return null;
+    }
+
+    function calcDistance(x1, y1, x2, y2) {
+        return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
     }
 
     function chooseTemplate(tr, defaultTpl) {
@@ -348,11 +443,17 @@
         if (wallLevel <= maxWallA && tr.querySelector('.farm_icon_a:not([disabled]):not(.disabled)')) return 'a';
         if (maxWallB > 0 && wallLevel !== -1 && wallLevel <= maxWallB && tr.querySelector('.farm_icon_b:not([disabled]):not(.disabled)')) return 'b';
 
-        if (tr.querySelector('.farm_icon_' + d + ':not([disabled])')) return d;
-        if (tr.querySelector('.farm_icon_a:not([disabled])')) return 'a';
-        if (tr.querySelector('.farm_icon_b:not([disabled])')) return 'b';
-        if (tr.querySelector('.farm_icon_c:not([disabled])')) return 'c';
-        return d;
+        if (tr.querySelector('.farm_icon_' + d + ':not([disabled]):not(.disabled)')) {
+            if (d === 'c' && !checkMinResForC(tr)) return null;
+            return d;
+        }
+        if (tr.querySelector('.farm_icon_a:not([disabled]):not(.disabled)')) return 'a';
+        if (tr.querySelector('.farm_icon_b:not([disabled]):not(.disabled)')) return 'b';
+        if (tr.querySelector('.farm_icon_c:not([disabled]):not(.disabled)')) {
+            if (!checkMinResForC(tr)) return null;
+            return 'c';
+        }
+        return null;
     }
 
     function chooseMergeTemplate(tr, useA, useB, useC) {
@@ -370,7 +471,10 @@
         // Fallback: A → B → C
         if (useA && hasA) return 'a';
         if (useB && hasB) return 'b';
-        if (useC && hasC) return 'c';
+        if (useC && hasC) {
+            if (!checkMinResForC(tr)) return null;
+            return 'c';
+        }
         return null;
     }
 
@@ -384,18 +488,29 @@
         var mergeB = getS('mergeB', false);
         var mergeC = getS('mergeC', false);
 
+        var skipAttacked = getS('skipAttacked', true);
+        var maxDist = getS('maxDistance', 0);
+        var attackerCoords = maxDist > 0 ? getAttackerCoords() : null;
+
         var allRows = document.querySelectorAll('#plunder_list tbody tr');
         var targets = [];
         var skippedRefarm = 0;
         var skippedAttack = 0;
+        var skippedMaxA = 0;
+        var skippedDist = 0;
 
         for (var i = 0; i < allRows.length; i++) {
             var tr = allRows[i];
 
-            if (hasCurrentAttack(tr)) { skippedAttack++; continue; }
+            if (skipAttacked && hasCurrentAttack(tr)) { skippedAttack++; continue; }
 
             var villageId = getVillageId(tr);
             if (villageId && shouldSkipRefarm(villageId)) { skippedRefarm++; continue; }
+            if (villageId && shouldSkipMaxAttacks(villageId)) { skippedMaxA++; continue; }
+            if (maxDist > 0 && attackerCoords) {
+                var tc = getTargetCoords(tr);
+                if (tc && calcDistance(attackerCoords.x, attackerCoords.y, tc.x, tc.y) > maxDist) { skippedDist++; continue; }
+            }
 
             if (mergeEnabled && (mergeA || mergeB || mergeC)) {
                 var tpl = chooseMergeTemplate(tr, mergeA, mergeB, mergeC);
@@ -413,6 +528,8 @@
             var skipMsg = ' [' + total + ' صف]';
             if (skippedAttack > 0) skipMsg += ' (' + skippedAttack + ' تحت هجوم)';
             if (skippedRefarm > 0) skipMsg += ' (' + skippedRefarm + ' انتظار إعادة نهب)';
+            if (skippedMaxA > 0) skipMsg += ' (' + skippedMaxA + ' حد هجمات)';
+            if (skippedDist > 0) skipMsg += ' (' + skippedDist + ' بعيدة)';
             var noIcon = total - skippedAttack - skippedRefarm;
             if (noIcon > 0) skipMsg += ' (' + noIcon + ' بلا أيقونة)';
             setStatus('لا توجد أهداف' + skipMsg);
@@ -433,7 +550,7 @@
                     var btn = t.tr.querySelector('.farm_icon_' + t.tpl);
                     if (btn) {
                         btn.click();
-                        markAttacked(t.villageId);
+                        markAttacked(t.villageId, t.tpl);
                     }
                 }, d);
             })(target, cumDelay);
