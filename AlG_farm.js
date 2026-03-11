@@ -355,6 +355,19 @@
         return d;
     }
 
+    function chooseMergeTemplate(tr, useA, useB, useC) {
+        var wallLevel = parseWallLevel(tr);
+        var maxWallA = getS('maxWallForA', 5);
+        var minWallB = getS('minWallForB', 6);
+
+        if (useA && wallLevel !== -1 && wallLevel <= maxWallA && tr.querySelector('.farm_icon_a')) return 'a';
+        if (useB && minWallB > 0 && wallLevel !== -1 && wallLevel >= minWallB && tr.querySelector('.farm_icon_b')) return 'b';
+        if (useC && tr.querySelector('.farm_icon_c')) return 'c';
+        if (useA && tr.querySelector('.farm_icon_a')) return 'a';
+        if (useB && tr.querySelector('.farm_icon_b')) return 'b';
+        return null;
+    }
+
     // ===================== FARM LOGIC =====================
     function farmRows() {
         var defaultTpl = getS('template', 'A');
@@ -379,18 +392,13 @@
             if (villageId && shouldSkipRefarm(villageId)) { skippedRefarm++; continue; }
 
             if (mergeEnabled) {
-                var tplsToSend = [];
-                if (mergeA && tr.querySelector('.farm_icon_a')) tplsToSend.push('a');
-                if (mergeB && tr.querySelector('.farm_icon_b')) tplsToSend.push('b');
-                if (mergeC && tr.querySelector('.farm_icon_c')) tplsToSend.push('c');
-                if (tplsToSend.length === 0) continue;
-                for (var t = 0; t < tplsToSend.length; t++) {
-                    targets.push({ tr: tr, tpl: tplsToSend[t], villageId: villageId, merged: true });
-                }
+                var tpl = chooseMergeTemplate(tr, mergeA, mergeB, mergeC);
+                if (!tpl) continue;
+                targets.push({ tr: tr, tpl: tpl, villageId: villageId });
             } else {
                 var tpl = chooseTemplate(tr, defaultTpl);
                 if (!tr.querySelector('.farm_icon_' + tpl)) continue;
-                targets.push({ tr: tr, tpl: tpl, villageId: villageId, merged: false });
+                targets.push({ tr: tr, tpl: tpl, villageId: villageId });
             }
         }
 
@@ -403,8 +411,7 @@
             return;
         }
 
-        var mergedVillages = {};
-        var setStatus_msg = mergeEnabled ? 'يحصد ' + targets.length + ' هجوم (دمج)...' : 'يحصد ' + targets.length + ' قرية...';
+        var setStatus_msg = mergeEnabled ? 'يحصد ' + targets.length + ' قرية (دمج ذكي)...' : 'يحصد ' + targets.length + ' قرية...';
         setStatus(setStatus_msg);
 
         var cumDelay = 0;
@@ -417,10 +424,7 @@
                     var btn = t.tr.querySelector('.farm_icon_' + t.tpl);
                     if (btn) {
                         btn.click();
-                        if (!t.merged || !mergedVillages[t.villageId]) {
-                            markAttacked(t.villageId);
-                            if (t.merged) mergedVillages[t.villageId] = true;
-                        }
+                        markAttacked(t.villageId);
                     }
                 }, d);
             })(target, cumDelay);
