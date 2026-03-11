@@ -635,7 +635,141 @@ function buildClustersDialog(list_clusters_stats){
     Dialog.show('content',html);
 }
 
+// ===== MINI PANEL (auto-run) =====
+var autoTimer=null,countdownTimer=null,autoEnabled=false;
+
+function buildMiniPanel(){
+    var _ex=document.getElementById('alg-mini-panel');if(_ex)_ex.parentNode.removeChild(_ex);
+
+    var top=GM_getValue('alg_bal_miniTop','200px');
+    var left=GM_getValue('alg_bal_miniLeft','8px');
+    var minimized=GM_getValue('alg_bal_miniMin',false);
+    var interval=GM_getValue('alg_bal_interval',7200);
+    autoEnabled=GM_getValue('alg_bal_autoEnabled',false);
+
+    var p=document.createElement('div');
+    p.id='alg-mini-panel';
+    p.style.cssText='position:fixed;top:'+top+';left:'+left+';z-index:99999;background:'+BG+';border:2px solid '+BORDER+';border-radius:8px;font-family:Trebuchet MS,sans-serif;font-size:13px;color:'+CREAM+';direction:rtl;min-width:190px;box-shadow:3px 3px 10px rgba(0,0,0,0.6);user-select:none;';
+
+    var bodyStyle='padding:10px;display:'+(minimized?'none':'block')+';';
+    var inpS='background:#0a0600;color:'+CREAM+';border:1px solid '+BORDER+';padding:3px 6px;border-radius:3px;width:100%;box-sizing:border-box;';
+
+    p.innerHTML=
+        '<div id="alg-mini-hdr" style="background:linear-gradient(to bottom,'+HDR+','+BG2+');color:'+GOLD+';padding:7px 10px;border-radius:6px 6px 0 0;cursor:move;display:flex;justify-content:space-between;align-items:center;">'+
+            '<b style="font-size:12px;">&#9878; AlGzawy - الموازنة</b>'+
+            '<button id="alg-mini-min" style="background:none;border:none;color:'+CREAM+';cursor:pointer;font-size:16px;line-height:1;padding:0 4px;">'+(minimized?'+':'−')+'</button>'+
+        '</div>'+
+        '<div id="alg-mini-body" style="'+bodyStyle+'">'+
+            '<div style="margin-bottom:6px;">'+
+                '<label style="display:block;margin-bottom:2px;font-size:11px;color:'+DIM+';">الفترة (ثانية)</label>'+
+                '<input id="alg-mini-interval" type="number" min="60" value="'+interval+'" style="'+inpS+'">'+
+            '</div>'+
+            '<button id="alg-mini-run" style="width:100%;padding:7px;border-radius:4px;border:1px solid '+BORDER+';cursor:pointer;font-weight:bold;font-size:13px;margin-bottom:6px;background:'+(autoEnabled?'linear-gradient(to bottom,#7a0000,#4a0000)':'linear-gradient(to bottom,#1a6b2e,#0f4a1e)')+';color:'+(autoEnabled?'#ffaaaa':'#e8ffe8')+';">'+(autoEnabled?'&#9632; إيقاف':'&#9654; تشغيل تلقائي')+'</button>'+
+            '<div id="alg-mini-status" style="text-align:center;font-size:11px;color:'+GOLD+';min-height:16px;margin-bottom:6px;">'+(autoEnabled?'جاري...':'متوقف')+'</div>'+
+            '<button id="alg-mini-open" style="width:100%;padding:5px;border-radius:4px;border:1px solid '+BORDER+';cursor:pointer;font-size:12px;background:linear-gradient(to bottom,#3d2500,#2e1c00);color:'+CREAM+';">&#9881; فتح الإعدادات</button>'+
+            '<div style="text-align:center;margin-top:8px;font-size:10px;color:'+DIM+';border-top:1px solid '+BORDER+';padding-top:6px;">AlGzawy &bull; موازنة v1.0</div>'+
+        '</div>';
+
+    document.body.appendChild(p);
+
+    // Drag
+    var drag=false,sX,sY,sL,sT;
+    var hdrEl=document.getElementById('alg-mini-hdr');
+    hdrEl.onmousedown=function(e){
+        if(e.target.tagName==='BUTTON')return;
+        drag=true;sX=e.clientX;sY=e.clientY;
+        var r=p.getBoundingClientRect();sL=r.left;sT=r.top;
+        p.style.left=sL+'px';p.style.top=sT+'px';
+    };
+    document.addEventListener('mousemove',function(e){
+        if(!drag)return;
+        p.style.left=(sL+e.clientX-sX)+'px';
+        p.style.top=(sT+e.clientY-sY)+'px';
+    });
+    document.addEventListener('mouseup',function(){
+        if(!drag)return;
+        drag=false;
+        GM_setValue('alg_bal_miniTop',p.style.top);
+        GM_setValue('alg_bal_miniLeft',p.style.left);
+    });
+
+    // Minimize
+    document.getElementById('alg-mini-min').onclick=function(){
+        var b=document.getElementById('alg-mini-body');
+        var isMin=b.style.display==='none';
+        b.style.display=isMin?'block':'none';
+        this.textContent=isMin?'−':'+';
+        GM_setValue('alg_bal_miniMin',!isMin);
+    };
+
+    // Open main
+    document.getElementById('alg-mini-open').onclick=function(){
+        createMainInterface();
+    };
+
+    // Toggle auto-run
+    document.getElementById('alg-mini-run').onclick=function(){
+        var iv=parseInt(document.getElementById('alg-mini-interval').value)||7200;
+        GM_setValue('alg_bal_interval',iv);
+        autoEnabled=!autoEnabled;
+        GM_setValue('alg_bal_autoEnabled',autoEnabled);
+        if(autoEnabled){
+            this.style.background='linear-gradient(to bottom,#7a0000,#4a0000)';
+            this.style.color='#ffaaaa';
+            this.innerHTML='&#9632; إيقاف';
+            startAutoRun(iv);
+        } else {
+            this.style.background='linear-gradient(to bottom,#1a6b2e,#0f4a1e)';
+            this.style.color='#e8ffe8';
+            this.innerHTML='&#9654; تشغيل تلقائي';
+            stopAutoRun();
+            setMiniStatus('متوقف');
+        }
+    };
+
+    if(autoEnabled){
+        var iv=parseInt(GM_getValue('alg_bal_interval',7200))||7200;
+        startAutoRun(iv);
+    }
+}
+
+function setMiniStatus(msg){
+    var el=document.getElementById('alg-mini-status');
+    if(el)el.textContent=msg;
+}
+
+function stopAutoRun(){
+    if(autoTimer){clearTimeout(autoTimer);autoTimer=null;}
+    if(countdownTimer){clearInterval(countdownTimer);countdownTimer=null;}
+}
+
+function startAutoRun(intervalSec){
+    stopAutoRun();
+    function runCycle(){
+        setMiniStatus('جاري الموازنة...');
+        balancingResources().then(function(){
+            scheduleNext(intervalSec);
+        }).catch(function(){
+            scheduleNext(intervalSec);
+        });
+    }
+    function scheduleNext(sec){
+        var end=Date.now()+sec*1000;
+        countdownTimer=setInterval(function(){
+            var rem=Math.max(0,Math.round((end-Date.now())/1000));
+            var h=Math.floor(rem/3600),m=Math.floor((rem%3600)/60),s=rem%60;
+            setMiniStatus('التالي: '+h+':'+(m<10?'0':'')+m+':'+(s<10?'0':'')+s);
+            if(rem<=0){clearInterval(countdownTimer);}
+        },1000);
+        autoTimer=setTimeout(function(){
+            clearInterval(countdownTimer);
+            runCycle();
+        },sec*1000);
+    }
+    runCycle();
+}
+
 // ===== INIT =====
-createMainInterface();
+buildMiniPanel();
 
 })();
