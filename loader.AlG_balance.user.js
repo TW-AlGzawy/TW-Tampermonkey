@@ -14,6 +14,7 @@
 // @grant        GM_getValue
 // @grant        GM_info
 // @grant        unsafeWindow
+// @run-at       document-end
 // ==/UserScript==
 
 (function () {
