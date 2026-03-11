@@ -345,13 +345,13 @@
         var maxWallA = getS('maxWallForA', 5);
         var minWallB = getS('minWallForB', 6);
 
-        if (wallLevel <= maxWallA && tr.querySelector('.farm_icon_a')) return 'a';
-        if (minWallB > 0 && wallLevel >= minWallB && tr.querySelector('.farm_icon_b')) return 'b';
+        if (wallLevel <= maxWallA && tr.querySelector('.farm_icon_a:not([disabled])')) return 'a';
+        if (minWallB > 0 && wallLevel >= minWallB && tr.querySelector('.farm_icon_b:not([disabled])')) return 'b';
 
-        if (tr.querySelector('.farm_icon_' + d)) return d;
-        if (tr.querySelector('.farm_icon_a')) return 'a';
-        if (tr.querySelector('.farm_icon_b')) return 'b';
-        if (tr.querySelector('.farm_icon_c')) return 'c';
+        if (tr.querySelector('.farm_icon_' + d + ':not([disabled])')) return d;
+        if (tr.querySelector('.farm_icon_a:not([disabled])')) return 'a';
+        if (tr.querySelector('.farm_icon_b:not([disabled])')) return 'b';
+        if (tr.querySelector('.farm_icon_c:not([disabled])')) return 'c';
         return d;
     }
 
@@ -359,9 +359,9 @@
         var wallLevel = parseWallLevel(tr);
         var maxWallA = getS('maxWallForA', 5);
         var minWallB = getS('minWallForB', 6);
-        var hasA = !!tr.querySelector('.farm_icon_a');
-        var hasB = !!tr.querySelector('.farm_icon_b');
-        var hasC = !!tr.querySelector('.farm_icon_c');
+        var hasA = !!tr.querySelector('.farm_icon_a:not([disabled])');
+        var hasB = !!tr.querySelector('.farm_icon_b:not([disabled])');
+        var hasC = !!tr.querySelector('.farm_icon_c:not([disabled])');
 
         // Wall-based rules
         if (useA && wallLevel !== -1 && wallLevel <= maxWallA && hasA) return 'a';
