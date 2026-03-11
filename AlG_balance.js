@@ -551,7 +551,11 @@ function buildTable(list_launches,obj_stats,list_production,list_clusters_stats)
     document.getElementById('alg-stats-div').innerHTML=sH;
 
     // Sends table
-    var tH='<table class="alg-T" id="alg-sends-table" style="font-size:12px;"><tr>'+
+    var tH='<div style="margin-bottom:6px;display:flex;gap:8px;align-items:center;">'+
+        '<button id="alg-send-all-btn" class="alg-BIG-BTN" style="padding:6px 20px;font-size:13px;">&#9654;&#9654; إرسال الكل تلقائياً</button>'+
+        '<span id="alg-send-all-status" style="font-size:12px;color:'+GOLD+';"></span>'+
+        '</div>'+
+        '<table class="alg-T" id="alg-sends-table" style="font-size:12px;"><tr>'+
         '<td class="alg-TH">م</td><td class="alg-TH" style="min-width:120px;">القرية المستهدفة</td>'+
         '<td class="alg-TH">أقصى مسافة</td><td class="alg-TH">إجمالي</td>'+
         '<td class="alg-TH"><img src="https://dsen.innogamescdn.com/asset/c2e59f13/graphic/buildings/wood.png"/></td>'+
@@ -592,6 +596,40 @@ function buildTable(list_launches,obj_stats,list_production,list_clusters_stats)
             $('.alg-SEND-BTN').prop('disabled',false);
         },250);
     });
+
+    // Send All button
+    document.getElementById('alg-send-all-btn').onclick=function(){
+        var allBtns=$('.alg-SEND-BTN:not(:disabled)');
+        if(allBtns.length===0)return;
+        var btn=this;
+        btn.disabled=true;
+        btn.style.opacity='0.6';
+        var statusEl=document.getElementById('alg-send-all-status');
+        var total=allBtns.length,sent=0;
+        statusEl.textContent='0 / '+total;
+        function sendNext(idx){
+            if(idx>=allBtns.length){
+                statusEl.textContent='تم إرسال '+sent+' طلب';
+                btn.disabled=false;
+                btn.style.opacity='1';
+                return;
+            }
+            var b=allBtns[idx];
+            if(!b||$(b).closest('tr').length===0){sendNext(idx+1);return;}
+            var row=$(b).data('row');
+            var tid=$(b).data('tid');
+            var res;
+            try{res=JSON.parse($(b).attr('data-res'));}catch(e){sendNext(idx+1);return;}
+            sendResources(tid,res);
+            sent++;
+            statusEl.textContent=sent+' / '+total;
+            window.setTimeout(function(){
+                $('#alg-row-'+row).remove();
+                sendNext(idx+1);
+            },400);
+        }
+        sendNext(0);
+    };
 
     // Enter key
     if($('.alg-SEND-BTN').length>0)$('.alg-SEND-BTN').first().focus();
