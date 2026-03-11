@@ -72,7 +72,7 @@
         var ref = getS('refresh', 600000);
         var pgs = getS('pagesToFarm', 0);
         var maxWallA = getS('maxWallForA', 5);
-        var minWallB = getS('minWallForB', 0);
+        var maxWallB = getS('maxWallForB', 0);
         var refarmDelay = getS('refarmDelay', 7200000);
         var mergeEnabled = getS('mergeEnabled', false);
         var mergeA = getS('mergeA', false);
@@ -117,7 +117,7 @@
                 row('عدد الصفحات', '<input id="alg-f-pgs" type="number" min="0" value="' + pgs + '" style="' + inputStyle + 'width:100%;">') +
                 '<div style="border-top:1px solid #c1a264;margin:8px 0 6px;padding-top:6px;font-weight:bold;color:#5c2d0a;">⚙ الفلاتر الذكية</div>' +
                 row('حائط A ≤', '<input id="alg-f-maxwalla" type="number" min="0" max="20" value="' + maxWallA + '" style="' + inputStyle + 'width:100%;" title="استخدم القالب A إذا كان مستوى الحائط أقل من أو يساوي هذه القيمة">') +
-                row('حائط B ≥', '<input id="alg-f-minwallb" type="number" min="0" max="20" value="' + minWallB + '" style="' + inputStyle + 'width:100%;" title="استخدم القالب B إذا كان مستوى الحائط أكبر من أو يساوي هذه القيمة">') +
+                row('حائط B ≤', '<input id="alg-f-maxwallb" type="number" min="0" max="20" value="' + maxWallB + '" style="' + inputStyle + 'width:100%;" title="استخدم القالب B إذا كان مستوى الحائط أقل من أو يساوي هذه القيمة">') +
                 row('إعادة نهب بعد (ms)', '<input id="alg-f-refarm" type="number" min="0" value="' + refarmDelay + '" style="' + inputStyle + 'width:100%;" title="0 = بدون قيد. مدة الانتظار قبل إعادة نهب نفس القرية">') +
                 '<div style="border-top:1px solid #c1a264;margin:8px 0 6px;padding-top:6px;">' +
                     '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:bold;color:#5c2d0a;">' +
@@ -142,7 +142,7 @@
                 '<button id="alg-f-save" style="' + btnStyle + 'background:#7a5c2a;margin-bottom:6px;">حفظ</button>' +
                 '<button id="alg-f-run" style="' + btnStyle + 'background:' + (isRunning ? '#c0392b' : '#27ae60') + ';font-size:14px;margin-bottom:4px;">' + (isRunning ? 'إيقاف' : 'تشغيل') + '</button>' +
                 '<div id="alg-f-status" style="margin-top:6px;font-size:11px;color:#542e0a;text-align:center;min-height:16px;">' + (isRunning ? 'جاري العمل...' : 'متوقف') + '</div>' +
-                '<div style="text-align:center;margin-top:8px;font-size:10px;color:#7a5c2a;border-top:1px solid #c1a264;padding-top:6px;">AlGzawy • الإصدار 2.2 ذكي</div>' +
+                '<div style="text-align:center;margin-top:8px;font-size:10px;color:#7a5c2a;border-top:1px solid #c1a264;padding-top:6px;">AlGzawy • الإصدار 2.3 ذكي</div>' +
             '</div>';
 
         document.body.appendChild(panel);
@@ -178,7 +178,7 @@
         saveS('refresh', parseInt(document.getElementById('alg-f-ref').value) || 600000);
         saveS('pagesToFarm', parseInt(document.getElementById('alg-f-pgs').value) || 0);
         saveS('maxWallForA', parseInt(document.getElementById('alg-f-maxwalla').value));
-        saveS('minWallForB', parseInt(document.getElementById('alg-f-minwallb').value));
+        saveS('maxWallForB', parseInt(document.getElementById('alg-f-maxwallb').value));
         saveS('refarmDelay', parseInt(document.getElementById('alg-f-refarm').value) || 0);
         saveS('mergeEnabled', document.getElementById('alg-f-merge').checked);
         saveS('mergeA', document.getElementById('alg-f-merge-a').checked);
@@ -343,10 +343,10 @@
         if (wallLevel === -1) return d;
 
         var maxWallA = getS('maxWallForA', 5);
-        var minWallB = getS('minWallForB', 6);
+        var maxWallB = getS('maxWallForB', 6);
 
-        if (wallLevel <= maxWallA && tr.querySelector('.farm_icon_a:not([disabled])')) return 'a';
-        if (minWallB > 0 && wallLevel >= minWallB && tr.querySelector('.farm_icon_b:not([disabled])')) return 'b';
+        if (wallLevel <= maxWallA && tr.querySelector('.farm_icon_a:not([disabled]):not(.disabled)')) return 'a';
+        if (maxWallB > 0 && wallLevel !== -1 && wallLevel <= maxWallB && tr.querySelector('.farm_icon_b:not([disabled]):not(.disabled)')) return 'b';
 
         if (tr.querySelector('.farm_icon_' + d + ':not([disabled])')) return d;
         if (tr.querySelector('.farm_icon_a:not([disabled])')) return 'a';
@@ -358,14 +358,14 @@
     function chooseMergeTemplate(tr, useA, useB, useC) {
         var wallLevel = parseWallLevel(tr);
         var maxWallA = getS('maxWallForA', 5);
-        var minWallB = getS('minWallForB', 6);
+        var maxWallB = getS('maxWallForB', 6);
         var hasA = !!tr.querySelector('.farm_icon_a:not([disabled]):not(.disabled)');
         var hasB = !!tr.querySelector('.farm_icon_b:not([disabled]):not(.disabled)');
         var hasC = !!tr.querySelector('.farm_icon_c:not([disabled]):not(.disabled)');
 
         // Wall-based rules
         if (useA && wallLevel !== -1 && wallLevel <= maxWallA && hasA) return 'a';
-        if (useB && minWallB > 0 && wallLevel !== -1 && wallLevel >= minWallB && hasB) return 'b';
+        if (useB && maxWallB > 0 && wallLevel !== -1 && wallLevel <= maxWallB && hasB) return 'b';
 
         // Fallback: A → B → C
         if (useA && hasA) return 'a';
