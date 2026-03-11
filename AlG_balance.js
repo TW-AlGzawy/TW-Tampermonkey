@@ -758,7 +758,11 @@ function autoSendAll(onComplete,closeAfter){
     var total=allBtns.length,sent=0;
     var sendBtn=document.getElementById('alg-send-all-btn');
     var statusEl=document.getElementById('alg-send-all-status');
-    if(total===0){if(onComplete)onComplete();return;}
+    if(total===0){
+        if(closeAfter){var w=document.getElementById('alg-window');if(w)w.parentNode.removeChild(w);setMiniStatus('متوازن ✓');}
+        if(onComplete)onComplete();
+        return;
+    }
     if(sendBtn){sendBtn.disabled=true;sendBtn.style.opacity='0.6';}
     if(statusEl)statusEl.textContent='0 / '+total;
     function sendNext(idx){
