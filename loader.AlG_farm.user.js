@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         AlGzawy - Farm Bot النهب [v2.0]
+// @name         AlGzawy - Farm Bot النهب [v2.1]
 // @namespace    AlGzawy-Scripts-farm-loader
-// @version      2.0
+// @version      2.1
 // @description  يقوم بتحميل وتشغيل بوت النهب الآمن من AlGzawy
 // @author       AlGzawy
 // @include      https://*.tribalwars.*/game.php?*screen=am_farm*
