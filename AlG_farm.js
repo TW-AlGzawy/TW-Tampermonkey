@@ -75,7 +75,7 @@
         var minWallB = getS('minWallForB', 0);
         var refarmDelay = getS('refarmDelay', 7200000);
         var mergeEnabled = getS('mergeEnabled', false);
-        var mergeA = getS('mergeA', true);
+        var mergeA = getS('mergeA', false);
         var mergeB = getS('mergeB', false);
         var mergeC = getS('mergeC', false);
 
@@ -359,9 +359,9 @@
         var wallLevel = parseWallLevel(tr);
         var maxWallA = getS('maxWallForA', 5);
         var minWallB = getS('minWallForB', 6);
-        var hasA = !!tr.querySelector('.farm_icon_a:not([disabled])');
-        var hasB = !!tr.querySelector('.farm_icon_b:not([disabled])');
-        var hasC = !!tr.querySelector('.farm_icon_c:not([disabled])');
+        var hasA = !!tr.querySelector('.farm_icon_a:not([disabled]):not(.disabled)');
+        var hasB = !!tr.querySelector('.farm_icon_b:not([disabled]):not(.disabled)');
+        var hasC = !!tr.querySelector('.farm_icon_c:not([disabled]):not(.disabled)');
 
         // Wall-based rules
         if (useA && wallLevel !== -1 && wallLevel <= maxWallA && hasA) return 'a';
@@ -380,7 +380,7 @@
         var minD = getS('minDelay', 200);
         var maxD = getS('maxDelay', 300);
         var mergeEnabled = getS('mergeEnabled', false);
-        var mergeA = getS('mergeA', true);
+        var mergeA = getS('mergeA', false);
         var mergeB = getS('mergeB', false);
         var mergeC = getS('mergeC', false);
 
