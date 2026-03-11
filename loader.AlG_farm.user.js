@@ -24,6 +24,34 @@
     const UPDATE_URL = GM_info.script.updateURL;
     const CURRENT_VERSION = GM_info.script.version;
 
+    const SETTINGS_PREFIX = 'algzawy_farm_bot_';
+    const DEFAULTS = {
+        template: 'A',
+        minDelay: 200,
+        maxDelay: 300,
+        switchDelay: 30000,
+        refresh: 600000,
+        pagesToFarm: 0,
+        isRunning: false,
+        panelTop: '150px',
+        panelLeft: '10px',
+        maxWallForA: 5,
+        maxWallForB: 0,
+        refarmDelay: 7200000
+    };
+
+    const settingsForExternalCode = {
+        save: function (key, value) {
+            GM_setValue(SETTINGS_PREFIX + key, value);
+        }
+    };
+
+    for (const key in DEFAULTS) {
+        settingsForExternalCode[key] = GM_getValue(SETTINGS_PREFIX + key, DEFAULTS[key]);
+    }
+
+    unsafeWindow.ALGZAWY_SETTINGS = settingsForExternalCode;
+
     function checkForUpdates() {
         const updateButton = document.getElementById('check-update-btn');
         updateButton.textContent = 'جاري البحث...';
