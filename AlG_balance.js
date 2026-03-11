@@ -278,10 +278,16 @@ function calculateLaunches(list_production_cluster,list_production_home_cluster,
 
 // ===== SEND RESOURCES =====
 function sendResources(target_id,data){
-    TribalWars.post('market',{village:target_id,ajaxaction:'call',h:window.csrf_token},data,function(response){
-        console.log(response);
-        if(response&&response.success) UI.SuccessMessage(response.success,1000);
+    var tw=window.TribalWars;
+    if(!tw){console.error('[AlGzawy Balance] TribalWars غير متاح');return false;}
+    var csrf=window.csrf_token||(window.game_data&&window.game_data.csrf)||'';
+    if(!csrf){console.error('[AlGzawy Balance] CSRF token مفقود');return false;}
+    console.log('[AlGzawy Balance] إرسال إلى',target_id,'csrf:',csrf,'data:',JSON.stringify(data));
+    tw.post('market',{village:target_id,ajaxaction:'call',h:csrf},data,function(response){
+        console.log('[AlGzawy Balance] استجابة:',response);
+        try{if(response&&response.success)UI.SuccessMessage(response.success,1000);}catch(e){}
     });
+    return true;
 }
 
 // ===== MAIN BALANCE FUNCTION =====
@@ -777,7 +783,8 @@ function autoSendAll(onComplete,closeAfter){
         var tid=$(b).data('tid');
         var res;
         try{res=JSON.parse($(b).attr('data-res'));}catch(e){sendNext(idx+1);return;}
-        sendResources(tid,res);
+        var ok=sendResources(tid,res);
+        if(!ok){console.error('[AlGzawy Balance] فشل الإرسال للقرية',tid);sendNext(idx+1);return;}
         sent++;
         if(statusEl)statusEl.textContent=sent+' / '+total;
         window.setTimeout(function(){
