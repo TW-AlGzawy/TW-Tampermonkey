@@ -169,6 +169,14 @@
         var btn = document.getElementById('alg-f-run');
         if (btn) { btn.textContent = 'إيقاف'; btn.style.background = '#c0392b'; }
         sessionStorage.setItem(PAGE_IDX_KEY, '0');
+
+        var toRemove = [];
+        for (var i = 0; i < sessionStorage.length; i++) {
+            var k = sessionStorage.key(i);
+            if (k && k.indexOf(LAST_ATTACK_PREFIX) === 0) toRemove.push(k);
+        }
+        toRemove.forEach(function (k) { sessionStorage.removeItem(k); });
+
         farmRows();
     }
 
