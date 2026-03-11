@@ -36,7 +36,7 @@
         panelTop: '150px',
         panelLeft: '10px',
         maxWallForA: 5,
-        minWallForB: 0,
+        minWallForB: 6,
         refarmDelay: 7200000
     };
 
