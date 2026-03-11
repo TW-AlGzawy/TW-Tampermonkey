@@ -451,7 +451,7 @@ function injectCSS(){
 }
 
 function createMainInterface(){
-    $('#alg-window').remove();
+    var _ex=document.getElementById('alg-window');if(_ex)_ex.parentNode.removeChild(_ex);
     injectCSS();
 
     var saved={};
@@ -495,10 +495,10 @@ function createMainInterface(){
         '</div>'+
     '</div>';
 
-    $('body').append(html);
+    document.body.insertAdjacentHTML('beforeend', html);
     statusEl=document.getElementById('alg-status');
 
-    if(['pt_PT','de_DE'].includes(game_data.locale)){document.getElementById('alg-cap-row').style.display='';}
+    try{if(['pt_PT','de_DE'].includes(game_data.locale)){document.getElementById('alg-cap-row').style.display='';}}catch(e){}
 
     // Drag
     var el=document.getElementById('alg-window'),hdr=document.getElementById('alg-hdr');
