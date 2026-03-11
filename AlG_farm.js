@@ -74,6 +74,10 @@
         var maxWallA = getS('maxWallForA', 5);
         var minWallB = getS('minWallForB', 0);
         var refarmDelay = getS('refarmDelay', 7200000);
+        var mergeEnabled = getS('mergeEnabled', false);
+        var mergeA = getS('mergeA', true);
+        var mergeB = getS('mergeB', false);
+        var mergeC = getS('mergeC', false);
 
         var panel = document.createElement('div');
         panel.id = 'alg-farm-panel';
@@ -115,6 +119,26 @@
                 row('حائط A ≤', '<input id="alg-f-maxwalla" type="number" min="0" max="20" value="' + maxWallA + '" style="' + inputStyle + 'width:100%;" title="استخدم القالب A إذا كان مستوى الحائط أقل من أو يساوي هذه القيمة">') +
                 row('حائط B ≥', '<input id="alg-f-minwallb" type="number" min="0" max="20" value="' + minWallB + '" style="' + inputStyle + 'width:100%;" title="استخدم القالب B إذا كان مستوى الحائط أكبر من أو يساوي هذه القيمة">') +
                 row('إعادة نهب بعد (ms)', '<input id="alg-f-refarm" type="number" min="0" value="' + refarmDelay + '" style="' + inputStyle + 'width:100%;" title="0 = بدون قيد. مدة الانتظار قبل إعادة نهب نفس القرية">') +
+                '<div style="border-top:1px solid #c1a264;margin:8px 0 6px;padding-top:6px;">' +
+                    '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:bold;color:#5c2d0a;">' +
+                        '<input type="checkbox" id="alg-f-merge" ' + (mergeEnabled ? 'checked' : '') + ' style="width:16px;height:16px;cursor:pointer;">' +
+                        '⚔ دمج القوالب' +
+                    '</label>' +
+                '</div>' +
+                '<div id="alg-f-merge-opts" style="display:' + (mergeEnabled ? 'block' : 'none') + ';background:rgba(139,105,20,0.1);border:1px solid #c1a264;border-radius:4px;padding:8px;margin-bottom:6px;">' +
+                    '<div style="font-size:11px;color:#5c2d0a;margin-bottom:6px;">اختر القوالب التي تُرسل لكل قرية:</div>' +
+                    '<div style="display:flex;gap:12px;justify-content:center;">' +
+                        '<label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-weight:bold;">' +
+                            '<input type="checkbox" id="alg-f-merge-a" ' + (mergeA ? 'checked' : '') + ' style="width:16px;height:16px;cursor:pointer;"> A' +
+                        '</label>' +
+                        '<label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-weight:bold;">' +
+                            '<input type="checkbox" id="alg-f-merge-b" ' + (mergeB ? 'checked' : '') + ' style="width:16px;height:16px;cursor:pointer;"> B' +
+                        '</label>' +
+                        '<label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-weight:bold;">' +
+                            '<input type="checkbox" id="alg-f-merge-c" ' + (mergeC ? 'checked' : '') + ' style="width:16px;height:16px;cursor:pointer;"> C' +
+                        '</label>' +
+                    '</div>' +
+                '</div>' +
                 '<button id="alg-f-save" style="' + btnStyle + 'background:#7a5c2a;margin-bottom:6px;">حفظ</button>' +
                 '<button id="alg-f-run" style="' + btnStyle + 'background:' + (isRunning ? '#c0392b' : '#27ae60') + ';font-size:14px;margin-bottom:4px;">' + (isRunning ? 'إيقاف' : 'تشغيل') + '</button>' +
                 '<div id="alg-f-status" style="margin-top:6px;font-size:11px;color:#542e0a;text-align:center;min-height:16px;">' + (isRunning ? 'جاري العمل...' : 'متوقف') + '</div>' +
@@ -123,6 +147,10 @@
 
         document.body.appendChild(panel);
         statusEl = document.getElementById('alg-f-status');
+
+        document.getElementById('alg-f-merge').onchange = function () {
+            document.getElementById('alg-f-merge-opts').style.display = this.checked ? 'block' : 'none';
+        };
 
         makeDraggable(panel, document.getElementById('alg-farm-hdr'));
 
@@ -152,6 +180,10 @@
         saveS('maxWallForA', parseInt(document.getElementById('alg-f-maxwalla').value));
         saveS('minWallForB', parseInt(document.getElementById('alg-f-minwallb').value));
         saveS('refarmDelay', parseInt(document.getElementById('alg-f-refarm').value) || 0);
+        saveS('mergeEnabled', document.getElementById('alg-f-merge').checked);
+        saveS('mergeA', document.getElementById('alg-f-merge-a').checked);
+        saveS('mergeB', document.getElementById('alg-f-merge-b').checked);
+        saveS('mergeC', document.getElementById('alg-f-merge-c').checked);
         setStatus('تم الحفظ ✓');
         setTimeout(function () { setStatus(isRunning ? 'جاري العمل...' : 'متوقف'); }, 1500);
     }
@@ -328,6 +360,10 @@
         var defaultTpl = getS('template', 'A');
         var minD = getS('minDelay', 200);
         var maxD = getS('maxDelay', 300);
+        var mergeEnabled = getS('mergeEnabled', false);
+        var mergeA = getS('mergeA', true);
+        var mergeB = getS('mergeB', false);
+        var mergeC = getS('mergeC', false);
 
         var allRows = document.querySelectorAll('#plunder_list tbody tr');
         var targets = [];
@@ -337,22 +373,25 @@
         for (var i = 0; i < allRows.length; i++) {
             var tr = allRows[i];
 
-            if (hasCurrentAttack(tr)) {
-                skippedAttack++;
-                continue;
-            }
+            if (hasCurrentAttack(tr)) { skippedAttack++; continue; }
 
             var villageId = getVillageId(tr);
-            if (villageId && shouldSkipRefarm(villageId)) {
-                skippedRefarm++;
-                continue;
+            if (villageId && shouldSkipRefarm(villageId)) { skippedRefarm++; continue; }
+
+            if (mergeEnabled) {
+                var tplsToSend = [];
+                if (mergeA && tr.querySelector('.farm_icon_a')) tplsToSend.push('a');
+                if (mergeB && tr.querySelector('.farm_icon_b')) tplsToSend.push('b');
+                if (mergeC && tr.querySelector('.farm_icon_c')) tplsToSend.push('c');
+                if (tplsToSend.length === 0) continue;
+                for (var t = 0; t < tplsToSend.length; t++) {
+                    targets.push({ tr: tr, tpl: tplsToSend[t], villageId: villageId, merged: true });
+                }
+            } else {
+                var tpl = chooseTemplate(tr, defaultTpl);
+                if (!tr.querySelector('.farm_icon_' + tpl)) continue;
+                targets.push({ tr: tr, tpl: tpl, villageId: villageId, merged: false });
             }
-
-            var tpl = chooseTemplate(tr, defaultTpl);
-
-            if (!tr.querySelector('.farm_icon_' + tpl)) continue;
-
-            targets.push({ tr: tr, tpl: tpl, villageId: villageId });
         }
 
         if (targets.length === 0) {
@@ -364,7 +403,9 @@
             return;
         }
 
-        setStatus('يحصد ' + targets.length + ' قرية...');
+        var mergedVillages = {};
+        var setStatus_msg = mergeEnabled ? 'يحصد ' + targets.length + ' هجوم (دمج)...' : 'يحصد ' + targets.length + ' قرية...';
+        setStatus(setStatus_msg);
 
         var cumDelay = 0;
         targets.forEach(function (target) {
@@ -376,7 +417,10 @@
                     var btn = t.tr.querySelector('.farm_icon_' + t.tpl);
                     if (btn) {
                         btn.click();
-                        markAttacked(t.villageId);
+                        if (!t.merged || !mergedVillages[t.villageId]) {
+                            markAttacked(t.villageId);
+                            if (t.merged) mergedVillages[t.villageId] = true;
+                        }
                     }
                 }, d);
             })(target, cumDelay);
