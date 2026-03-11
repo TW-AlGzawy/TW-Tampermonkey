@@ -1,561 +1,641 @@
+// ============================================================
+//  AlGzawy - موازنة الموارد v1.0
+//  © AlGzawy 2024 - جميع الحقوق محفوظة
+//  https://github.com/TW-AlGzawy/TW-Tampermonkey
+// ============================================================
+
 (function () {
-    'use strict';
+'use strict';
 
-    var S = unsafeWindow.ALGZAWY_SETTINGS;
+// ===== THEME =====
+var BG       = '#1e1200';
+var BG2      = '#2e1c00';
+var HDR      = '#3d2500';
+var BORDER   = '#8b6914';
+var GOLD     = '#d4a017';
+var CREAM    = '#f0e6c8';
+var DIM      = '#a08060';
+var ROW_A    = 'rgba(139,105,20,0.12)';
+var ROW_B    = 'rgba(0,0,0,0.18)';
 
-    var isRunning = !!S.isRunning;
-    var balanceTimer = null;
-    var countdownTimer = null;
-    var statusEl = null;
-
-    function getS(key, def) {
-        var v = S[key];
-        return (v !== undefined && v !== null) ? v : def;
+// ===== K-MEANS =====
+function getClusters(coords, options) {
+    var k = Math.min(options.numberOfClusters || 1, coords.length);
+    var maxIter = options.maxIterations || 100;
+    function mean(pts) {
+        if (!pts.length) return [0,0];
+        var sx=0,sy=0; pts.forEach(function(p){sx+=p[0];sy+=p[1];}); return [sx/pts.length,sy/pts.length];
     }
-
-    function saveS(key, val) {
-        S.save(key, val);
-        S[key] = val;
+    if (k<=1) return [{data:coords.slice(),mean:mean(coords)}];
+    var centroids=[],used=[];
+    for (var i=0;i<k;i++){
+        var idx; do{idx=Math.floor(Math.random()*coords.length);}while(used.indexOf(idx)!==-1);
+        used.push(idx); centroids.push([coords[idx][0],coords[idx][1]]);
     }
-
-    function setStatus(msg) {
-        if (statusEl) statusEl.textContent = msg;
-    }
-
-    var inputStyle = 'padding:3px;border:1px solid #2d6a2d;background:#f0fff0;border-radius:4px;box-sizing:border-box;';
-    var btnStyle = 'width:100%;padding:6px;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;display:block;';
-
-    function rowHtml(label, inputHtml) {
-        return '<div style="margin-bottom:6px;"><label style="display:block;margin-bottom:2px;font-weight:bold;">' + label + '</label>' + inputHtml + '</div>';
-    }
-
-    function makeDraggable(el, handle) {
-        var sX, sY, sL, sT;
-        handle.onmousedown = function (e) {
-            sX = e.clientX; sY = e.clientY;
-            sL = parseInt(el.style.left) || 0;
-            sT = parseInt(el.style.top) || 0;
-            document.onmousemove = function (e) {
-                el.style.left = (sL + e.clientX - sX) + 'px';
-                el.style.top = (sT + e.clientY - sY) + 'px';
-            };
-            document.onmouseup = function () {
-                document.onmousemove = null;
-                document.onmouseup = null;
-                GM_setValue('algzawy_balance_panelTop', el.style.top);
-                GM_setValue('algzawy_balance_panelLeft', el.style.left);
-            };
-        };
-    }
-
-    // ===================== K-MEANS =====================
-    function calcMean(coords) {
-        if (!coords.length) return [0, 0];
-        var sx = 0, sy = 0;
-        for (var i = 0; i < coords.length; i++) { sx += coords[i][0]; sy += coords[i][1]; }
-        return [sx / coords.length, sy / coords.length];
-    }
-
-    function getClusters(coords, options) {
-        var k = Math.min(options.numberOfClusters || 1, coords.length);
-        var maxIter = options.maxIterations || 100;
-        if (k <= 1 || !coords.length) {
-            return [{ data: coords.slice(), mean: calcMean(coords) }];
+    var asgn=new Array(coords.length).fill(0);
+    for (var iter=0;iter<maxIter;iter++){
+        var changed=false;
+        for (var i=0;i<coords.length;i++){
+            var minD=Infinity,best=0;
+            for (var j=0;j<k;j++){var dx=coords[i][0]-centroids[j][0],dy=coords[i][1]-centroids[j][1],d=dx*dx+dy*dy;if(d<minD){minD=d;best=j;}}
+            if(asgn[i]!==best){asgn[i]=best;changed=true;}
         }
-        var centroids = [], used = [];
-        for (var i = 0; i < k; i++) {
-            var idx;
-            do { idx = Math.floor(Math.random() * coords.length); } while (used.indexOf(idx) !== -1);
-            used.push(idx);
-            centroids.push([coords[idx][0], coords[idx][1]]);
-        }
-        var assignments = new Array(coords.length).fill(0);
-        for (var iter = 0; iter < maxIter; iter++) {
-            var changed = false;
-            for (var i = 0; i < coords.length; i++) {
-                var minD = Infinity, minC = 0;
-                for (var j = 0; j < k; j++) {
-                    var dx = coords[i][0] - centroids[j][0], dy = coords[i][1] - centroids[j][1];
-                    var d = dx * dx + dy * dy;
-                    if (d < minD) { minD = d; minC = j; }
-                }
-                if (assignments[i] !== minC) { assignments[i] = minC; changed = true; }
-            }
-            if (!changed) break;
-            for (var j = 0; j < k; j++) {
-                var m = [];
-                for (var i = 0; i < coords.length; i++) { if (assignments[i] === j) m.push(coords[i]); }
-                if (m.length) centroids[j] = calcMean(m);
-            }
-        }
-        var clusters = [];
-        for (var j = 0; j < k; j++) {
-            var m = [];
-            for (var i = 0; i < coords.length; i++) { if (assignments[i] === j) m.push(coords[i]); }
-            if (m.length) clusters.push({ data: m, mean: centroids[j] });
-        }
-        return clusters;
+        if(!changed)break;
+        for (var j=0;j<k;j++){var m=coords.filter(function(_,i){return asgn[i]===j;});if(m.length)centroids[j]=mean(m);}
     }
+    var clusters=[];
+    for (var j=0;j<k;j++){var m=coords.filter(function(_,i){return asgn[i]===j;});if(m.length)clusters.push({data:m,mean:mean(m)});}
+    return clusters;
+}
 
-    function calcDistance(c1, c2) {
-        var x1 = parseInt(c1.split('|')[0]), y1 = parseInt(c1.split('|')[1]);
-        var x2 = parseInt(c2.split('|')[0]), y2 = parseInt(c2.split('|')[1]);
-        return Math.sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
-    }
+// ===== getResourcesForAM stub =====
+async function getResourcesForAM(map_farm_usage) {
+    var result = [];
+    for (var i=0;i<101;i++) result.push(new Map());
+    return result;
+}
 
-    // ===================== HTTP =====================
-    function httpGet(url) {
-        return new Promise(function (resolve, reject) {
-            GM_xmlhttpRequest({ method: 'GET', url: url, onload: function (r) { resolve(r.responseText); }, onerror: reject });
-        });
-    }
+// ===== UTILS =====
+function calcDistance(c1,c2){
+    var x1=parseInt(c1.split('|')[0]),y1=parseInt(c1.split('|')[1]),x2=parseInt(c2.split('|')[0]),y2=parseInt(c2.split('|')[1]);
+    return Math.sqrt((x1-x2)*(x1-x2)+(y1-y2)*(y1-y2));
+}
+function fmtN(n){ return new Intl.NumberFormat().format(n); }
+function httpGet(url){var x=new XMLHttpRequest();x.open('GET',url,false);x.send(null);return x.responseText;}
 
-    function sleep(ms) {
-        return new Promise(function (r) { setTimeout(r, ms); });
-    }
-
-    // ===================== DATA FETCHING =====================
-    async function fetchPages(baseUrl) {
-        var html = await httpGet(baseUrl);
-        var parser = new DOMParser();
-        var doc = parser.parseFromString(html, 'text/html');
-        var pages = [];
-        var navItems = doc.querySelectorAll('.paged-nav-item');
-        if (navItems.length > 0) {
-            var nr = 0;
-            navItems.forEach(function (item) {
-                pages.push(item.href.split('page=')[0] + 'page=' + (nr++));
+// ===== DATA FETCHING =====
+function getDataProduction(){
+    return new Promise(function(resolve,reject){
+        var link=game_data.link_base_pure+'overview_villages&mode=prod';
+        var dataPage=httpGet(link);
+        var parser=new DOMParser();
+        var htmlDoc=parser.parseFromString(dataPage,'text/html');
+        var list_pages=[];
+        if($(htmlDoc).find('.paged-nav-item').parent().find('select').length>0){
+            Array.from($(htmlDoc).find('.paged-nav-item').parent().find('select').find('option')).forEach(function(item){list_pages.push(item.value);});
+            list_pages.pop();
+        } else if(htmlDoc.getElementsByClassName('paged-nav-item').length>0){
+            var nr=0;
+            Array.from(htmlDoc.getElementsByClassName('paged-nav-item')).forEach(function(item){
+                var c=item.href;c=c.split('page=')[0]+'page='+nr;nr++;list_pages.push(c);
             });
-            pages = pages.reverse();
+        } else {list_pages.push(link);}
+        list_pages=list_pages.reverse();
+        var list_production=[],map_farm_usage=new Map();
+        function ajaxRequest(urls){
+            var current_url=urls.length>0?urls.pop():'stop';
+            var t0=new Date().getTime();
+            if(urls.length>=0&&current_url!='stop'){
+                $.ajax({url:current_url,method:'get',success:function(data){
+                    var parser=new DOMParser();
+                    var htmlDoc=parser.parseFromString(data,'text/html');
+                    var rows=Array.from($(htmlDoc).find('.row_a, .row_b'));
+                    for(var i=0;i<rows.length;i++){
+                        try{
+                            var vn=rows[i].getElementsByClassName('quickedit-vn')[0];
+                            var name=vn.innerText;
+                            var coord=name.match(/[0-9]{3}\|[0-9]{3}/)[0];
+                            var id=vn.getAttribute('data-id');
+                            var wood=parseInt(rows[i].getElementsByClassName('wood')[0].innerText.replace(/\./g,''));
+                            var stone=parseInt(rows[i].getElementsByClassName('stone')[0].innerText.replace(/\./g,''));
+                            var iron=parseInt(rows[i].getElementsByClassName('iron')[0].innerText.replace(/\./g,''));
+                            var mt=rows[i].querySelector("a[href*='market']").innerText;
+                            var merchants=parseInt(mt.split('/')[0]);
+                            var merchants_total=parseInt(mt.split('/')[1]);
+                            var capacity=parseInt(rows[i].children[4].innerText.replace(/\./g,''));
+                            var points=parseInt(rows[i].children[2].innerText.replace(/\./g,''));
+                            var popT=rows[i].children[6].innerText;
+                            var fpu=parseInt(popT.split('/')[0]);
+                            var fpt=parseInt(popT.split('/')[1]);
+                            list_production.push({coord:coord,id:id,wood:wood,stone:stone,iron:iron,name:name.trim(),merchants:merchants,merchants_total:merchants_total,capacity:capacity,points:points});
+                            map_farm_usage.set(coord,fpu/fpt);
+                        }catch(e){}
+                    }
+                    var diff=new Date().getTime()-t0;
+                    window.setTimeout(function(){ajaxRequest(urls);UI.SuccessMessage('الإنتاج: صفحة '+urls.length,500);},Math.max(0,200-diff));
+                },error:function(err){reject(err);}});
+            } else {
+                UI.SuccessMessage('تم جلب بيانات الإنتاج',800);
+                resolve({list_production:list_production,map_farm_usage:map_farm_usage});
+            }
+        }
+        ajaxRequest(list_pages);
+    });
+}
+
+function getDataIncoming(){
+    return new Promise(function(resolve,reject){
+        var link=game_data.link_base_pure+'overview_villages&mode=trader&type=inc';
+        var dataPage=httpGet(link);
+        var parser=new DOMParser();
+        var htmlDoc=parser.parseFromString(dataPage,'text/html');
+        var list_pages=[];
+        if($(htmlDoc).find('.paged-nav-item').parent().find('select').length>0){
+            Array.from($(htmlDoc).find('.paged-nav-item').parent().find('select').find('option')).forEach(function(item){list_pages.push(item.value);});
+            list_pages.pop();
+        } else if(htmlDoc.getElementsByClassName('paged-nav-item').length>0){
+            var nr=0;
+            Array.from(htmlDoc.getElementsByClassName('paged-nav-item')).forEach(function(item){
+                var c=item.href;c=c.split('page=')[0]+'page='+nr;nr++;list_pages.push(c);
+            });
+        } else {list_pages.push(link);}
+        list_pages=list_pages.reverse();
+        var map_incoming=new Map();
+        function ajaxRequest(urls){
+            var current_url=urls.length>0?urls.pop():'stop';
+            var t0=new Date().getTime();
+            if(urls.length>=0&&current_url!='stop'){
+                $.ajax({url:current_url,method:'get',success:function(data){
+                    var parser=new DOMParser();
+                    var htmlDoc=parser.parseFromString(data,'text/html');
+                    var rows=Array.from($(htmlDoc).find('.row_a, .row_b'));
+                    for(var i=0;i<rows.length;i++){
+                        try{
+                            var coord=rows[i].children[4].innerText.match(/[0-9]{3}\|[0-9]{3}/)[0];
+                            var wood=parseInt($(rows[i]).find('.wood').parent().text().replace(/\./g,''))||0;
+                            var stone=parseInt($(rows[i]).find('.stone').parent().text().replace(/\./g,''))||0;
+                            var iron=parseInt($(rows[i]).find('.iron').parent().text().replace(/\./g,''))||0;
+                            if(map_incoming.has(coord)){var ex=map_incoming.get(coord);ex.wood+=wood;ex.stone+=stone;ex.iron+=iron;}
+                            else{map_incoming.set(coord,{wood:wood,stone:stone,iron:iron});}
+                        }catch(e){}
+                    }
+                    var diff=new Date().getTime()-t0;
+                    window.setTimeout(function(){ajaxRequest(urls);},Math.max(0,200-diff));
+                },error:function(err){reject(err);}});
+            } else {resolve(map_incoming);}
+        }
+        ajaxRequest(list_pages);
+    });
+}
+
+// ===== CALCULATE LAUNCHES (original logic, unchanged) =====
+function calculateLaunches(list_production_cluster,list_production_home_cluster,map_resources_get_AM,clusters,averageFactor,reserveMerchants,merchantCapacity){
+    var list_launches=[],list_clusters_stats=[];
+    var total_wood_send_stats=0,total_stone_send_stats=0,total_iron_send_stats=0;
+    var total_wood_get_stats=0,total_stone_get_stats=0,total_iron_get_stats=0;
+
+    for(var i=0;i<list_production_cluster.length;i++){
+        var list_prod=list_production_cluster[i];
+        var list_prod_home=list_production_home_cluster[i];
+        var avg_wood=0,avg_stone=0,avg_iron=0;
+        var total_wood_send=0,total_stone_send=0,total_iron_send=0;
+        var total_wood_get=0,total_stone_get=0,total_iron_get=0;
+        var list_res_send=[],list_res_get=[];
+        var total_wood_cluster=0,total_stone_cluster=0,total_iron_cluster=0;
+
+        for(var j=0;j<list_prod.length;j++){
+            avg_wood+=list_prod[j].wood/list_prod.length;
+            avg_stone+=list_prod[j].stone/list_prod.length;
+            avg_iron+=list_prod[j].iron/list_prod.length;
+            total_wood_cluster+=list_prod[j].wood;
+            total_stone_cluster+=list_prod[j].stone;
+            total_iron_cluster+=list_prod[j].iron;
+        }
+        var avg_wood_factor=avg_wood*averageFactor;
+        var avg_stone_factor=avg_stone*averageFactor;
+        var avg_iron_factor=avg_iron*averageFactor;
+
+        for(var j=0;j<list_prod.length;j++){
+            var coord=list_prod[j].coord,name=list_prod[j].name,id=list_prod[j].id;
+            var merchants=list_prod[j].merchants-reserveMerchants;
+            var capacity=list_prod[j].capacity*0.95;
+            var capacity_travel=merchants*merchantCapacity;
+            var avg_wood_res=avg_wood_factor,avg_stone_res=avg_stone_factor,avg_iron_res=avg_iron_factor;
+            if(map_resources_get_AM.has(list_prod[j].coord)){
+                var obj_res_AM=map_resources_get_AM.get(list_prod[j].coord);
+                avg_wood_res+=obj_res_AM.total_wood;avg_stone_res+=obj_res_AM.total_stone;avg_iron_res+=obj_res_AM.total_iron;
+                list_prod[j].time_finished=obj_res_AM.time_finished;
+            } else {list_prod[j].time_finished=0;}
+            var diff_wood=list_prod[j].wood-Math.round(avg_wood_res);
+            var diff_stone=list_prod[j].stone-Math.round(avg_stone_res);
+            var diff_iron=list_prod[j].iron-Math.round(avg_iron_res);
+            diff_wood=(diff_wood<0)?diff_wood:(list_prod_home[j].wood-diff_wood>0)?diff_wood:list_prod_home[j].wood;
+            diff_stone=(diff_stone<0)?diff_stone:(list_prod_home[j].stone-diff_stone>0)?diff_stone:list_prod_home[j].stone;
+            diff_iron=(diff_iron<0)?diff_iron:(list_prod_home[j].iron-diff_iron>0)?diff_iron:list_prod_home[j].iron;
+            var total_res_available=0;
+            if(diff_wood>0)total_res_available+=diff_wood;
+            if(diff_stone>0)total_res_available+=diff_stone;
+            if(diff_iron>0)total_res_available+=diff_iron;
+            var norm_factor=(capacity_travel<=total_res_available&&total_res_available>0)?capacity_travel/total_res_available:1;
+            var send_wood=(diff_wood>0)?parseInt(diff_wood*norm_factor):0;
+            var send_stone=(diff_stone>0)?parseInt(diff_stone*norm_factor):0;
+            var send_iron=(diff_iron>0)?parseInt(diff_iron*norm_factor):0;
+            var get_wood=(diff_wood>0)?0:(list_prod[j].wood+Math.abs(diff_wood)<capacity)?Math.abs(diff_wood):capacity-list_prod[j].wood;
+            var get_stone=(diff_stone>0)?0:(list_prod[j].stone+Math.abs(diff_stone)<capacity)?Math.abs(diff_stone):capacity-list_prod[j].stone;
+            var get_iron=(diff_iron>0)?0:(list_prod[j].iron+Math.abs(diff_iron)<capacity)?Math.abs(diff_iron):capacity-list_prod[j].iron;
+            total_wood_send+=send_wood;total_stone_send+=send_stone;total_iron_send+=send_iron;
+            total_wood_get+=get_wood;total_stone_get+=get_stone;total_iron_get+=get_iron;
+            var obj_send={coord:coord,id:id,name:name,wood:(send_wood>0)?send_wood:0,stone:(send_stone>0)?send_stone:0,iron:(send_iron>0)?send_iron:0};
+            var obj_get={coord:coord,id:id,name:name,wood:(get_wood>0)?parseInt(get_wood):0,stone:(get_stone>0)?parseInt(get_stone):0,iron:(get_iron>0)?parseInt(get_iron):0};
+            if(obj_send.wood>0||obj_send.stone>0||obj_send.iron>0)list_res_send.push(obj_send);
+            if(obj_get.wood>0||obj_get.stone>0||obj_get.iron>0)list_res_get.push(obj_get);
+        }
+
+        var norm_wood=(total_wood_get>total_wood_send&&total_wood_get>0)?(total_wood_send/total_wood_get):1;
+        var norm_stone=(total_stone_get>total_stone_send&&total_stone_get>0)?(total_stone_send/total_stone_get):1;
+        var norm_iron=(total_iron_get>total_iron_send&&total_iron_get>0)?(total_iron_send/total_iron_get):1;
+        for(var j=0;j<list_res_get.length;j++){
+            list_res_get[j].wood=parseInt(list_res_get[j].wood*norm_wood);
+            list_res_get[j].stone=parseInt(list_res_get[j].stone*norm_stone);
+            list_res_get[j].iron=parseInt(list_res_get[j].iron*norm_iron);
+        }
+
+        var list_maxDistance=[];
+        for(var j=0;j<list_res_get.length;j++){
+            var id_destination=list_res_get[j].id,name_destination=list_res_get[j].name;
+            for(var k=0;k<list_res_send.length;k++){list_res_send[k].distance=calcDistance(list_res_get[j].coord,list_res_send[k].coord);}
+            list_res_send.sort(function(a,b){return a.distance-b.distance;});
+            for(var k=0;k<list_res_send.length;k++){
+                var coord_origin=list_res_send[k].coord,id_origin=list_res_send[k].id,name_origin=list_res_send[k].name;
+                var sw=(list_res_send[k].wood>0)?Math.min(list_res_get[j].wood,list_res_send[k].wood):0;
+                var ss=(list_res_send[k].stone>0)?Math.min(list_res_get[j].stone,list_res_send[k].stone):0;
+                var si=(list_res_send[k].iron>0)?Math.min(list_res_get[j].iron,list_res_send[k].iron):0;
+                list_res_get[j].wood-=sw;list_res_get[j].stone-=ss;list_res_get[j].iron-=si;
+                list_res_send[k].wood-=sw;list_res_send[k].stone-=ss;list_res_send[k].iron-=si;
+                var total_send=sw+ss+si;
+                var restDivision=total_send%merchantCapacity;
+                var minim_resources=(merchantCapacity==1000)?700:1200;
+                if(restDivision<minim_resources){
+                    if(sw>restDivision){sw-=restDivision;total_send-=restDivision;}
+                    else if(ss>restDivision){ss-=restDivision;total_send-=restDivision;}
+                    else if(si>restDivision){si-=restDivision;total_send-=restDivision;}
+                }
+                list_maxDistance.push(list_res_send[k].distance);
+                if(total_send>=minim_resources){
+                    list_launches.push({total_send:total_send,wood:sw,stone:ss,iron:si,coord_origin:coord_origin,name_origin:name_origin,id_destination:id_destination,id_origin:id_origin,coord_destination:list_res_get[j].coord,name_destination:name_destination,distance:list_res_send[k].distance});
+                }
+                if(list_res_get[j].wood+list_res_get[j].stone+list_res_get[j].iron<minim_resources)break;
+            }
+        }
+        total_wood_send_stats+=total_wood_send;total_stone_send_stats+=total_stone_send;total_iron_send_stats+=total_iron_send;
+        total_wood_get_stats+=total_wood_get;total_stone_get_stats+=total_stone_get;total_iron_get_stats+=total_iron_get;
+        var max_distance=0;
+        for(var j=0;j<list_maxDistance.length;j++){if(max_distance<list_maxDistance[j])max_distance=list_maxDistance[j];}
+        list_clusters_stats.push({nr_coords:clusters[i].data.length,center:parseInt(clusters[i].mean[0])+'|'+parseInt(clusters[i].mean[1]),max_distance:max_distance,avg_wood:Math.round(avg_wood),avg_stone:Math.round(avg_stone),avg_iron:Math.round(avg_iron),total_wood_send:total_wood_send,total_stone_send:total_stone_send,total_iron_send:total_iron_send,total_wood_get:total_wood_get,total_stone_get:total_stone_get,total_iron_get:total_iron_get,total_wood_cluster:total_wood_cluster,total_stone_cluster:total_stone_cluster,total_iron_cluster:total_iron_cluster});
+    }
+    return{list_clusters_stats:list_clusters_stats,list_launches:list_launches,total_wood_send_stats:total_wood_send_stats,total_stone_send_stats:total_stone_send_stats,total_iron_send_stats:total_iron_send_stats,total_wood_get_stats:total_wood_get_stats,total_stone_get_stats:total_stone_get_stats,total_iron_get_stats:total_iron_get_stats};
+}
+
+// ===== SEND RESOURCES =====
+function sendResources(target_id,data){
+    TribalWars.post('market',{village:target_id,ajaxaction:'call',h:window.csrf_token},data,function(response){
+        console.log(response);
+        if(response&&response.success) UI.SuccessMessage(response.success,1000);
+    });
+}
+
+// ===== MAIN BALANCE FUNCTION =====
+async function balancingResources(){
+    var time_construction_total=parseFloat(document.getElementById('alg-time_construction').value)||0;
+    var averageFactor=parseFloat(document.getElementById('alg-nr_average_factor').value);
+    var reserveMerchants=parseInt(document.getElementById('alg-nr_merchants_reserve').value)||0;
+    var merchantCapacity=parseInt(document.getElementById('alg-merchant_capacity').value)||1000;
+    var nrClusters=parseInt(document.getElementById('alg-nr_clusters').value)||1;
+    var maxConstruction=document.getElementById('alg-max_construction').checked;
+
+    reserveMerchants=isNaN(reserveMerchants)||reserveMerchants<0?0:reserveMerchants;
+    nrClusters=isNaN(nrClusters)||nrClusters<1?1:nrClusters;
+    time_construction_total=isNaN(time_construction_total)||time_construction_total<0?0:Math.min(50,time_construction_total);
+    averageFactor=isNaN(averageFactor)?1:Math.max(0,Math.min(1,averageFactor));
+    merchantCapacity=isNaN(merchantCapacity)?1000:Math.min(1500,Math.max(1000,merchantCapacity));
+
+    setStatus('جاري جلب بيانات الإنتاج...');
+    document.getElementById('alg-div_tables').hidden=true;
+
+    var prodData=await getDataProduction().catch(function(e){alert('خطأ في جلب بيانات الإنتاج: '+e);return null;});
+    if(!prodData)return;
+    var list_production=prodData.list_production;
+    var map_farm_usage=prodData.map_farm_usage;
+
+    setStatus('جاري جلب الموارد الواردة...');
+    var map_incoming=await getDataIncoming().catch(function(e){alert('خطأ: '+e);return new Map();});
+
+    setStatus('جاري حساب التوزيع المثالي...');
+    var map_resources_get_AM_data=await getResourcesForAM(map_farm_usage);
+    var list_production_home=JSON.parse(JSON.stringify(list_production));
+    var map_resources_get_AM=time_construction_total>0?map_resources_get_AM_data[time_construction_total-1]:new Map();
+
+    var kmeans_coords=[];
+    for(var i=0;i<list_production.length;i++){kmeans_coords.push([parseInt(list_production[i].coord.split('|')[0]),parseInt(list_production[i].coord.split('|')[1])]);}
+    var clusters=getClusters(kmeans_coords,{numberOfClusters:nrClusters,maxIterations:100});
+
+    var list_production_cluster=[],list_production_home_cluster=[];
+    for(var i=0;i<clusters.length;i++){
+        var list_coords=clusters[i].data,list_prod=[],list_prod_home=[];
+        for(var j=0;j<list_coords.length;j++){
+            var coord=list_coords[j].join('|');
+            for(var k=0;k<list_production.length;k++){
+                if(list_production[k].coord===coord){list_prod.push(list_production[k]);list_prod_home.push(list_production_home[k]);break;}
+            }
+        }
+        list_production_cluster.push(list_prod);list_production_home_cluster.push(list_prod_home);
+    }
+
+    var total_wood_home=0,total_stone_home=0,total_iron_home=0;
+    var avg_wood_total=0,avg_stone_total=0,avg_iron_total=0;
+    for(var i=0;i<list_production.length;i++){
+        var coord=list_production[i].coord;
+        if(map_incoming.has(coord)){
+            list_production[i].wood=Math.min(list_production[i].wood+map_incoming.get(coord).wood,list_production[i].capacity);
+            list_production[i].stone=Math.min(list_production[i].stone+map_incoming.get(coord).stone,list_production[i].capacity);
+            list_production[i].iron=Math.min(list_production[i].iron+map_incoming.get(coord).iron,list_production[i].capacity);
+        }
+        avg_wood_total+=list_production[i].wood/list_production.length;
+        avg_stone_total+=list_production[i].stone/list_production.length;
+        avg_iron_total+=list_production[i].iron/list_production.length;
+        total_wood_home+=list_production[i].wood;
+        total_stone_home+=list_production[i].stone;
+        total_iron_home+=list_production[i].iron;
+    }
+
+    var launchesData;
+    if(!maxConstruction||averageFactor>0.5){
+        launchesData=calculateLaunches(list_production_cluster,list_production_home_cluster,map_resources_get_AM,clusters,averageFactor,reserveMerchants,merchantCapacity);
+    } else {
+        launchesData=calculateLaunches(list_production_cluster,list_production_home_cluster,map_resources_get_AM_data[0],clusters,averageFactor,reserveMerchants,merchantCapacity);
+        for(var count=1;count<100;count++){
+            var ld2=calculateLaunches(list_production_cluster,list_production_home_cluster,map_resources_get_AM_data[count],clusters,averageFactor,reserveMerchants,merchantCapacity);
+            var notEnough=false;
+            for(var si=0;si<ld2.list_clusters_stats.length;si++){
+                if(ld2.list_clusters_stats[si].total_iron_get>ld2.list_clusters_stats[si].total_iron_send||ld2.list_clusters_stats[si].total_stone_get>ld2.list_clusters_stats[si].total_stone_send||ld2.list_clusters_stats[si].total_wood_get>ld2.list_clusters_stats[si].total_wood_send){notEnough=true;break;}
+            }
+            if(notEnough)break;
+            launchesData=ld2;
+        }
+    }
+
+    var list_launches=launchesData.list_launches;
+
+    // Merchant count
+    var map_nr_merchants=new Map();
+    for(var i=0;i<list_launches.length;i++){
+        var nm=Math.ceil((list_launches[i].wood+list_launches[i].stone+list_launches[i].iron)/merchantCapacity);
+        if(map_nr_merchants.has(list_launches[i].coord_origin))map_nr_merchants.set(list_launches[i].coord_origin,nm+map_nr_merchants.get(list_launches[i].coord_origin));
+        else map_nr_merchants.set(list_launches[i].coord_origin,nm);
+    }
+    var map_result_wood=new Map(),map_result_stone=new Map(),map_result_iron=new Map();
+    for(var i=0;i<list_launches.length;i++){
+        var co=list_launches[i].coord_origin,cd=list_launches[i].coord_destination;
+        map_result_wood.set(co,(map_result_wood.get(co)||0)-list_launches[i].wood);
+        map_result_stone.set(co,(map_result_stone.get(co)||0)-list_launches[i].stone);
+        map_result_iron.set(co,(map_result_iron.get(co)||0)-list_launches[i].iron);
+        map_result_wood.set(cd,(map_result_wood.get(cd)||0)+list_launches[i].wood);
+        map_result_stone.set(cd,(map_result_stone.get(cd)||0)+list_launches[i].stone);
+        map_result_iron.set(cd,(map_result_iron.get(cd)||0)+list_launches[i].iron);
+    }
+    for(var i=0;i<list_production.length;i++){
+        var coord=list_production[i].coord;
+        list_production[i].merchantAvailable=list_production[i].merchants-(map_nr_merchants.get(coord)||0);
+        list_production[i].result_wood=map_result_wood.get(coord)||0;
+        list_production[i].result_stone=map_result_stone.get(coord)||0;
+        list_production[i].result_iron=map_result_iron.get(coord)||0;
+    }
+
+    var obj_stats={
+        avg_wood:Math.round(avg_wood_total),avg_stone:Math.round(avg_stone_total),avg_iron:Math.round(avg_iron_total),
+        total_wood_send:Math.round(launchesData.total_wood_send_stats),total_stone_send:Math.round(launchesData.total_stone_send_stats),total_iron_send:Math.round(launchesData.total_iron_send_stats),
+        total_wood_get:Math.round(launchesData.total_wood_get_stats),total_stone_get:Math.round(launchesData.total_stone_get_stats),total_iron_get:Math.round(launchesData.total_iron_get_stats),
+        total_wood_home:Math.round(total_wood_home),total_stone_home:Math.round(total_stone_home),total_iron_home:Math.round(total_iron_home)
+    };
+
+    var map_launches_mass=new Map();
+    for(var i=0;i<list_launches.length;i++){
+        var tid=list_launches[i].id_destination,oid=list_launches[i].id_origin;
+        var wk='resource['+oid+'][wood]',sk='resource['+oid+'][stone]',ik='resource['+oid+'][iron]';
+        if(map_launches_mass.has(tid)){
+            var u=map_launches_mass.get(tid);u.send_resources[wk]=list_launches[i].wood;u.send_resources[sk]=list_launches[i].stone;u.send_resources[ik]=list_launches[i].iron;
+            u.total_send+=list_launches[i].total_send;u.total_wood+=list_launches[i].wood;u.total_stone+=list_launches[i].stone;u.total_iron+=list_launches[i].iron;
+            u.distance=Math.max(u.distance,list_launches[i].distance);
         } else {
-            pages.push(baseUrl);
-        }
-        return { firstDoc: doc, pages: pages };
-    }
-
-    function parseNum(text) {
-        return parseInt((text || '').replace(/\D/g, '')) || 0;
-    }
-
-    async function getDataProduction() {
-        var base = unsafeWindow.game_data.link_base_pure + 'overview_villages&mode=prod';
-        var result = await fetchPages(base);
-        var list = [];
-        var parser = new DOMParser();
-
-        for (var p = 0; p < result.pages.length; p++) {
-            if (p > 0) await sleep(250);
-            var html = await httpGet(result.pages[p]);
-            var doc = parser.parseFromString(html, 'text/html');
-            var rows = doc.querySelectorAll('.row_a, .row_b');
-            rows.forEach(function (row) {
-                try {
-                    var vnEl = row.querySelector('.quickedit-vn');
-                    if (!vnEl) return;
-                    var name = (vnEl.innerText || vnEl.textContent || '').trim();
-                    var cm = name.match(/\d+\|\d+/);
-                    if (!cm) return;
-                    var coord = cm[0];
-                    var id = vnEl.getAttribute('data-id');
-
-                    var wood = parseNum((row.querySelector('.wood') || {}).innerText);
-                    var stone = parseNum((row.querySelector('.stone') || {}).innerText);
-                    var iron = parseNum((row.querySelector('.iron') || {}).innerText);
-
-                    var mLink = row.querySelector('a[href*="market"]');
-                    var merchants = 0, merchants_total = 0;
-                    if (mLink) {
-                        var mt = (mLink.innerText || mLink.textContent || '').trim();
-                        merchants = parseInt(mt.split('/')[0]) || 0;
-                        merchants_total = parseInt(mt.split('/')[1]) || 0;
-                    }
-                    var capEl = row.children[4];
-                    var capacity = capEl ? parseNum(capEl.innerText || capEl.textContent) || 100000 : 100000;
-
-                    list.push({ coord: coord, id: id, name: name, wood: wood, stone: stone, iron: iron, merchants: merchants, merchants_total: merchants_total, capacity: capacity });
-                } catch (e) {}
-            });
-        }
-        return list;
-    }
-
-    async function getDataIncoming() {
-        var base = unsafeWindow.game_data.link_base_pure + 'overview_villages&mode=trader&type=inc';
-        var result = await fetchPages(base);
-        var map = new Map();
-        var parser = new DOMParser();
-
-        for (var p = 0; p < result.pages.length; p++) {
-            if (p > 0) await sleep(250);
-            var html = await httpGet(result.pages[p]);
-            var doc = parser.parseFromString(html, 'text/html');
-            var rows = doc.querySelectorAll('.row_a, .row_b');
-            rows.forEach(function (row) {
-                try {
-                    var c4 = row.children[4];
-                    if (!c4) return;
-                    var m = (c4.innerText || c4.textContent || '').match(/\d+\|\d+/);
-                    if (!m) return;
-                    var coord = m[0];
-
-                    var woodEl = row.querySelector('.wood');
-                    var stoneEl = row.querySelector('.stone');
-                    var ironEl = row.querySelector('.iron');
-                    var wood = woodEl ? parseNum((woodEl.parentElement || woodEl).innerText) : 0;
-                    var stone = stoneEl ? parseNum((stoneEl.parentElement || stoneEl).innerText) : 0;
-                    var iron = ironEl ? parseNum((ironEl.parentElement || ironEl).innerText) : 0;
-
-                    if (map.has(coord)) {
-                        var ex = map.get(coord);
-                        ex.wood += wood; ex.stone += stone; ex.iron += iron;
-                    } else {
-                        map.set(coord, { wood: wood, stone: stone, iron: iron });
-                    }
-                } catch (e) {}
-            });
-        }
-        return map;
-    }
-
-    // ===================== CALCULATE LAUNCHES =====================
-    function calculateLaunches(list_prod_cluster, list_prod_home_cluster, avgFactor, reserveMerchants, merchantCap) {
-        var list_launches = [];
-
-        for (var ci = 0; ci < list_prod_cluster.length; ci++) {
-            var prod = list_prod_cluster[ci];
-            var prodHome = list_prod_home_cluster[ci];
-            if (!prod.length) continue;
-
-            var avg_w = 0, avg_s = 0, avg_i = 0;
-            for (var j = 0; j < prod.length; j++) {
-                avg_w += prod[j].wood / prod.length;
-                avg_s += prod[j].stone / prod.length;
-                avg_i += prod[j].iron / prod.length;
-            }
-            avg_w *= avgFactor; avg_s *= avgFactor; avg_i *= avgFactor;
-
-            var list_send = [], list_get = [];
-
-            for (var j = 0; j < prod.length; j++) {
-                var p = prod[j], ph = prodHome[j];
-                var merchants = Math.max(0, p.merchants - reserveMerchants);
-                var cap = p.capacity * 0.95;
-                var cap_travel = merchants * merchantCap;
-
-                var dw = p.wood - Math.round(avg_w);
-                var ds = p.stone - Math.round(avg_s);
-                var di = p.iron - Math.round(avg_i);
-
-                dw = (dw < 0) ? dw : (ph.wood - dw > 0) ? dw : ph.wood;
-                ds = (ds < 0) ? ds : (ph.stone - ds > 0) ? ds : ph.stone;
-                di = (di < 0) ? di : (ph.iron - di > 0) ? di : ph.iron;
-
-                var avail = (dw > 0 ? dw : 0) + (ds > 0 ? ds : 0) + (di > 0 ? di : 0);
-                var nf = (cap_travel > 0 && cap_travel <= avail) ? cap_travel / avail : 1;
-
-                var sw = dw > 0 ? parseInt(dw * nf) : 0;
-                var ss = ds > 0 ? parseInt(ds * nf) : 0;
-                var si = di > 0 ? parseInt(di * nf) : 0;
-
-                var gw = dw > 0 ? 0 : (p.wood + Math.abs(dw) < cap) ? Math.abs(dw) : cap - p.wood;
-                var gs = ds > 0 ? 0 : (p.stone + Math.abs(ds) < cap) ? Math.abs(ds) : cap - p.stone;
-                var gi = di > 0 ? 0 : (p.iron + Math.abs(di) < cap) ? Math.abs(di) : cap - p.iron;
-
-                if (sw > 0 || ss > 0 || si > 0) list_send.push({ coord: p.coord, id: p.id, name: p.name, wood: sw, stone: ss, iron: si });
-                if (gw > 0 || gs > 0 || gi > 0) list_get.push({ coord: p.coord, id: p.id, name: p.name, wood: parseInt(gw), stone: parseInt(gs), iron: parseInt(gi) });
-            }
-
-            var tw_s = 0, ts_s = 0, ti_s = 0, tw_g = 0, ts_g = 0, ti_g = 0;
-            list_send.forEach(function (o) { tw_s += o.wood; ts_s += o.stone; ti_s += o.iron; });
-            list_get.forEach(function (o) { tw_g += o.wood; ts_g += o.stone; ti_g += o.iron; });
-
-            var nw = (tw_g > tw_s && tw_g > 0) ? tw_s / tw_g : 1;
-            var ns = (ts_g > ts_s && ts_g > 0) ? ts_s / ts_g : 1;
-            var ni = (ti_g > ti_s && ti_g > 0) ? ti_s / ti_g : 1;
-            list_get.forEach(function (o) { o.wood = parseInt(o.wood * nw); o.stone = parseInt(o.stone * ns); o.iron = parseInt(o.iron * ni); });
-
-            for (var j = 0; j < list_get.length; j++) {
-                var g = list_get[j];
-                list_send.sort(function (a, b) { return calcDistance(g.coord, a.coord) - calcDistance(g.coord, b.coord); });
-
-                for (var k = 0; k < list_send.length; k++) {
-                    var s = list_send[k];
-                    var sw = Math.min(g.wood, s.wood);
-                    var ss = Math.min(g.stone, s.stone);
-                    var si = Math.min(g.iron, s.iron);
-                    var total = sw + ss + si;
-                    var minim = merchantCap === 1500 ? 1200 : 700;
-
-                    var rest = total % merchantCap;
-                    if (rest < minim) {
-                        if (sw > rest) { sw -= rest; total -= rest; }
-                        else if (ss > rest) { ss -= rest; total -= rest; }
-                        else if (si > rest) { si -= rest; total -= rest; }
-                    }
-
-                    g.wood -= sw; g.stone -= ss; g.iron -= si;
-                    s.wood -= sw; s.stone -= ss; s.iron -= si;
-
-                    if (total >= minim) {
-                        list_launches.push({
-                            wood: sw, stone: ss, iron: si, total_send: total,
-                            coord_origin: s.coord, id_origin: s.id, name_origin: s.name,
-                            coord_destination: g.coord, id_destination: g.id, name_destination: g.name,
-                            distance: calcDistance(g.coord, s.coord)
-                        });
-                    }
-                    if (g.wood + g.stone + g.iron < minim) break;
-                }
-            }
-        }
-        return list_launches;
-    }
-
-    // ===================== SEND RESOURCES =====================
-    function sendResources(target_id, data) {
-        return new Promise(function (resolve) {
-            var options = { village: target_id, ajaxaction: 'call', h: unsafeWindow.csrf_token };
-            try {
-                unsafeWindow.TribalWars.post('market', options, data, function (r) { resolve(r); });
-            } catch (e) { resolve(null); }
-        });
-    }
-
-    // ===================== BOT LOGIC =====================
-    async function runBalance() {
-        if (!isRunning) return;
-
-        var reserveMerchants = getS('reserveMerchants', 0);
-        var averageFactor = parseFloat(getS('averageFactor', 1.0)) || 1.0;
-        var nrClusters = parseInt(getS('nrClusters', 1)) || 1;
-        var merchantCap = 1000;
-        var sendDelay = getS('sendDelay', 400);
-
-        try {
-            setStatus('جاري جلب بيانات الإنتاج...');
-            var list_production = await getDataProduction();
-
-            if (!list_production.length) {
-                setStatus('لم يتم العثور على قرى!');
-                scheduleNext();
-                return;
-            }
-
-            setStatus('جاري جلب الموارد الواردة...');
-            var map_incoming = await getDataIncoming();
-
-            var list_home = list_production.map(function (p) { return Object.assign({}, p); });
-
-            list_production.forEach(function (p) {
-                if (map_incoming.has(p.coord)) {
-                    var inc = map_incoming.get(p.coord);
-                    p.wood = Math.min(p.wood + inc.wood, p.capacity);
-                    p.stone = Math.min(p.stone + inc.stone, p.capacity);
-                    p.iron = Math.min(p.iron + inc.iron, p.capacity);
-                }
-            });
-
-            setStatus('حساب التوزيع (' + list_production.length + ' قرية)...');
-
-            var kmeans_coords = list_production.map(function (p) {
-                return [parseInt(p.coord.split('|')[0]), parseInt(p.coord.split('|')[1])];
-            });
-            var clusters = getClusters(kmeans_coords, { numberOfClusters: nrClusters, maxIterations: 100 });
-
-            var list_prod_cluster = [], list_prod_home_cluster = [];
-            for (var ci = 0; ci < clusters.length; ci++) {
-                var lp = [], lph = [];
-                clusters[ci].data.forEach(function (xy) {
-                    var coord_str = xy[0] + '|' + xy[1];
-                    for (var k = 0; k < list_production.length; k++) {
-                        if (list_production[k].coord === coord_str) {
-                            lp.push(list_production[k]);
-                            lph.push(list_home[k]);
-                            break;
-                        }
-                    }
-                });
-                if (lp.length) { list_prod_cluster.push(lp); list_prod_home_cluster.push(lph); }
-            }
-
-            var list_launches = calculateLaunches(list_prod_cluster, list_prod_home_cluster, averageFactor, reserveMerchants, merchantCap);
-
-            var map_mass = new Map();
-            list_launches.forEach(function (l) {
-                var tid = l.id_destination;
-                var oid = l.id_origin;
-                var wk = 'resource[' + oid + '][wood]';
-                var sk = 'resource[' + oid + '][stone]';
-                var ik = 'resource[' + oid + '][iron]';
-                if (map_mass.has(tid)) {
-                    var ex = map_mass.get(tid);
-                    ex.send_resources[wk] = l.wood;
-                    ex.send_resources[sk] = l.stone;
-                    ex.send_resources[ik] = l.iron;
-                    ex.total += l.total_send;
-                } else {
-                    var sr = {}; sr[wk] = l.wood; sr[sk] = l.stone; sr[ik] = l.iron;
-                    map_mass.set(tid, { target_id: tid, name: l.name_destination, send_resources: sr, total: l.total_send });
-                }
-            });
-
-            var launches = Array.from(map_mass.values());
-
-            if (!launches.length) {
-                setStatus('الموارد متوازنة، لا شيء للإرسال');
-                GM_setValue('algzawy_balance_lastRun', Date.now().toString());
-                scheduleNext();
-                return;
-            }
-
-            setStatus('يرسل: 0/' + launches.length);
-
-            for (var i = 0; i < launches.length; i++) {
-                if (!isRunning) break;
-                await sleep(sendDelay + Math.floor(Math.random() * 200));
-                await sendResources(launches[i].target_id, launches[i].send_resources);
-                setStatus('يرسل: ' + (i + 1) + '/' + launches.length);
-            }
-
-            if (isRunning) {
-                var now = new Date().toLocaleTimeString('ar');
-                setStatus('اكتمل ' + now + ' (' + launches.length + ' إرسال)');
-                GM_setValue('algzawy_balance_lastRun', Date.now().toString());
-                scheduleNext();
-            }
-        } catch (e) {
-            setStatus('خطأ: ' + (e.message || e));
-            if (isRunning) scheduleNext();
+            var sr={};sr[wk]=list_launches[i].wood;sr[sk]=list_launches[i].stone;sr[ik]=list_launches[i].iron;
+            map_launches_mass.set(tid,{target_id:tid,coord_destination:list_launches[i].coord_destination,name_destination:list_launches[i].name_destination,send_resources:sr,total_send:list_launches[i].total_send,total_wood:list_launches[i].wood,total_stone:list_launches[i].stone,total_iron:list_launches[i].iron,distance:list_launches[i].distance});
         }
     }
+    var list_launches_mass=Array.from(map_launches_mass.entries()).map(function(e){return e[1];});
+    list_launches_mass.sort(function(a,b){return b.total_send-a.total_send;});
 
-    function scheduleNext() {
-        if (balanceTimer) clearTimeout(balanceTimer);
-        if (countdownTimer) clearInterval(countdownTimer);
-        if (!isRunning) return;
+    setStatus('');
+    document.getElementById('alg-div_tables').hidden=false;
+    buildTable(list_launches_mass,obj_stats,list_production,launchesData.list_clusters_stats);
+}
 
-        var interval = getS('interval', 7200000);
-        var lastRun = parseInt(GM_getValue('algzawy_balance_lastRun', '0')) || 0;
-        var elapsed = Date.now() - lastRun;
-        var remaining = Math.max(10000, interval - elapsed);
+// ===== UI =====
+var statusEl=null;
+function setStatus(msg){if(statusEl)statusEl.textContent=msg;}
 
-        setStatus('التشغيل القادم بعد ' + formatTime(Math.ceil(remaining / 1000)));
+function injectCSS(){
+    if(document.getElementById('alg-bal-css'))return;
+    var s=document.createElement('style');s.id='alg-bal-css';
+    s.textContent=[
+        '#alg-window{font-family:"Trebuchet MS",sans-serif;direction:rtl;color:'+CREAM+';box-sizing:border-box;}',
+        '#alg-window *{box-sizing:border-box;}',
+        '.alg-T{width:100%;border-collapse:collapse;font-size:13px;}',
+        '.alg-T td,.alg-T th{padding:6px 10px;border:1px solid '+BORDER+';vertical-align:middle;}',
+        '.alg-T tr:nth-child(even){background:'+ROW_A+';}',
+        '.alg-T tr:nth-child(odd){background:'+ROW_B+';}',
+        '.alg-TH{background:linear-gradient(to bottom,'+HDR+','+BG2+');color:'+GOLD+';font-weight:bold;text-align:center;}',
+        '.alg-IN{background:#0a0600;color:'+CREAM+';border:1px solid '+BORDER+';padding:4px 6px;border-radius:3px;width:80px;text-align:center;}',
+        '.alg-BTN{background:linear-gradient(to bottom,#5a3c00,#3d2500);color:'+GOLD+';border:1px solid '+BORDER+';padding:5px 14px;border-radius:4px;cursor:pointer;font-weight:bold;font-size:12px;}',
+        '.alg-BTN:hover{background:linear-gradient(to bottom,#7a5200,#5a3c00);}',
+        '.alg-BIG-BTN{background:linear-gradient(to bottom,#1a6b2e,#0f4a1e);color:#e8ffe8;border:1px solid #2d8a45;padding:9px 30px;border-radius:5px;cursor:pointer;font-weight:bold;font-size:15px;}',
+        '.alg-BIG-BTN:hover{background:linear-gradient(to bottom,#219639,#1a6b2e);}',
+        '.alg-SEND-BTN{background:linear-gradient(to bottom,#c87c0a,#8b5500);color:#fff;border:1px solid #d4a017;padding:4px 10px;border-radius:3px;cursor:pointer;font-size:12px;}',
+        '.alg-SEND-BTN:hover{background:linear-gradient(to bottom,#e09a0c,#c87c0a);}',
+        '.alg-SEND-BTN:disabled{opacity:0.5;cursor:default;}',
+        '#alg-scroll{max-height:350px;overflow-y:auto;}',
+        '#alg-scroll::-webkit-scrollbar{width:6px;}',
+        '#alg-scroll::-webkit-scrollbar-track{background:'+BG+';}',
+        '#alg-scroll::-webkit-scrollbar-thumb{background:'+BORDER+';border-radius:3px;}'
+    ].join('');
+    document.head.appendChild(s);
+}
 
-        var rem = Math.ceil(remaining / 1000);
-        countdownTimer = setInterval(function () {
-            rem--;
-            if (rem > 0) setStatus('التشغيل القادم بعد ' + formatTime(rem));
-            else { clearInterval(countdownTimer); countdownTimer = null; }
-        }, 1000);
+function createMainInterface(){
+    $('#alg-window').remove();
+    injectCSS();
 
-        balanceTimer = setTimeout(function () {
-            clearInterval(countdownTimer); countdownTimer = null;
-            runBalance();
-        }, remaining);
-    }
+    var saved={};
+    try{saved=JSON.parse(localStorage.getItem(game_data.world+'_alg_bal_v1')||'{}');}catch(e){}
 
-    function formatTime(sec) {
-        if (sec >= 3600) return Math.floor(sec / 3600) + 'س ' + Math.floor((sec % 3600) / 60) + 'د';
-        if (sec >= 60) return Math.floor(sec / 60) + 'د ' + (sec % 60) + 'ث';
-        return sec + 'ث';
-    }
+    var w='55%',minW='480px';
+    var html='<div id="alg-window" style="position:fixed;top:50px;left:50%;transform:translateX(-50%);z-index:99999;background:'+BG+';border:2px solid '+BORDER+';border-radius:8px;box-shadow:0 6px 30px rgba(0,0,0,0.8);width:'+w+';min-width:'+minW+';max-width:94vw;">'+
+        // HEADER
+        '<div id="alg-hdr" style="background:linear-gradient(to bottom,'+HDR+','+BG2+');padding:10px 14px;border-radius:6px 6px 0 0;cursor:move;display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid '+BORDER+';">'+
+            '<span style="color:'+GOLD+';font-weight:bold;font-size:15px;">&#9878; AlGzawy &mdash; موازنة الموارد</span>'+
+            '<span>'+
+                '<button id="alg-min-btn" style="background:none;border:none;color:'+CREAM+';cursor:pointer;font-size:18px;padding:0 6px;" title="تصغير">&#8722;</button>'+
+                '<button id="alg-close-btn" style="background:none;border:none;color:#e74c3c;cursor:pointer;font-size:18px;padding:0 6px;" title="إغلاق">&#10005;</button>'+
+            '</span>'+
+        '</div>'+
+        // BODY
+        '<div id="alg-body" style="padding:14px;">'+
+            // SETTINGS TABLE
+            '<table class="alg-T" style="margin-bottom:12px;">'+
+                '<tr><td class="alg-TH">الإعداد</td><td class="alg-TH">القيمة</td></tr>'+
+                '<tr><td>احتياطي التجار</td><td style="text-align:center;"><input type="number" id="alg-nr_merchants_reserve" class="alg-IN" value="'+(saved.m||0)+'" min="0"></td></tr>'+
+                '<tr><td>وقت البناء [ساعات] <span style="color:'+DIM+';font-size:11px;">(0 = تجاهل)</span></td><td style="text-align:center;"><input type="number" id="alg-time_construction" class="alg-IN" value="'+(saved.t||0)+'" min="0" max="50"></td></tr>'+
+                '<tr><td>عامل التوزيع [0&#8209;1]</td><td style="text-align:center;"><input type="number" id="alg-nr_average_factor" class="alg-IN" value="'+(saved.f!==undefined?saved.f:1)+'" min="0" max="1" step="0.1"></td></tr>'+
+                '<tr><td>عدد المجموعات</td><td style="text-align:center;"><input type="number" id="alg-nr_clusters" class="alg-IN" value="'+(saved.c||1)+'" min="1"></td></tr>'+
+                '<tr id="alg-cap-row" style="display:none;"><td>سعة التاجر</td><td style="text-align:center;"><input type="number" id="alg-merchant_capacity" class="alg-IN" value="'+(saved.mc||1000)+'"></td></tr>'+
+                '<tr><td>أقصى بناء</td><td style="text-align:center;"><input type="checkbox" id="alg-max_construction" '+(saved.mx?'checked':'')+' style="width:18px;height:18px;cursor:pointer;"></td></tr>'+
+            '</table>'+
+            // START BUTTON
+            '<div style="text-align:center;margin-bottom:12px;">'+
+                '<button class="alg-BIG-BTN" id="alg-start-btn">&#9654; ابدأ الموازنة</button>'+
+            '</div>'+
+            '<div id="alg-status" style="text-align:center;color:'+GOLD+';font-size:13px;min-height:22px;margin-bottom:10px;"></div>'+
+            '<div id="alg-div_tables" hidden>'+
+                '<div id="alg-stats-div" style="margin-bottom:8px;"></div>'+
+                '<div id="alg-scroll"><div id="alg-sends-div"></div></div>'+
+            '</div>'+
+        '</div>'+
+        // FOOTER
+        '<div style="background:'+HDR+';padding:6px 14px;border-radius:0 0 6px 6px;border-top:1px solid '+BORDER+';text-align:center;font-size:11px;color:'+DIM+';">'+
+            '&copy; AlGzawy 2024 &bull; موازنة الموارد v1.0 &bull; جميع الحقوق محفوظة &bull; <a href="https://github.com/TW-AlGzawy" style="color:'+GOLD+';">GitHub</a>'+
+        '</div>'+
+    '</div>';
 
-    // ===================== PANEL =====================
-    function buildPanel() {
-        var top = GM_getValue('algzawy_balance_panelTop', '150px');
-        var left = GM_getValue('algzawy_balance_panelLeft', '10px');
-        var minimized = GM_getValue('algzawy_balance_panelMinimized', false);
+    $('body').append(html);
+    statusEl=document.getElementById('alg-status');
 
-        var interval = getS('interval', 7200000);
-        var reserveMerchants = getS('reserveMerchants', 0);
-        var averageFactor = getS('averageFactor', 1.0);
-        var nrClusters = getS('nrClusters', 1);
-        var sendDelay = getS('sendDelay', 400);
+    if(['pt_PT','de_DE'].includes(game_data.locale)){document.getElementById('alg-cap-row').style.display='';}
 
-        var panel = document.createElement('div');
-        panel.id = 'alg-balance-panel';
-        panel.style.cssText = [
-            'position:fixed', 'top:' + top, 'left:' + left, 'z-index:99999',
-            'background:linear-gradient(to bottom,#e8f5e9,#c8e6c9)',
-            'border:2px solid #2d6a2d', 'border-radius:8px',
-            'font-family:Trebuchet MS,sans-serif', 'font-size:13px',
-            'color:#1a3a1a', 'direction:rtl', 'min-width:225px',
-            'box-shadow:3px 3px 10px rgba(0,0,0,0.5)', 'user-select:none'
-        ].join(';');
+    // Drag
+    var el=document.getElementById('alg-window'),hdr=document.getElementById('alg-hdr');
+    var drag=false,sX,sY,sL,sT;
+    hdr.onmousedown=function(e){
+        if(e.target.tagName==='BUTTON')return;
+        drag=true;sX=e.clientX;sY=e.clientY;
+        var r=el.getBoundingClientRect();sL=r.left;sT=r.top;
+        el.style.left=sL+'px';el.style.top=sT+'px';el.style.transform='none';
+    };
+    document.addEventListener('mousemove',function(e){if(!drag)return;el.style.left=(sL+e.clientX-sX)+'px';el.style.top=(sT+e.clientY-sY)+'px';});
+    document.addEventListener('mouseup',function(){drag=false;});
 
-        panel.innerHTML =
-            '<div id="alg-balance-hdr" style="background:linear-gradient(to bottom,#1a4d1a,#0d3000);color:#c8e6c9;padding:7px 10px;border-radius:6px 6px 0 0;cursor:move;display:flex;justify-content:space-between;align-items:center;">' +
-                '<b>AlGzawy - موازنة الموارد</b>' +
-                '<button id="alg-balance-min" style="background:none;border:none;color:#c8e6c9;cursor:pointer;font-size:16px;line-height:1;padding:0 4px;">' + (minimized ? '+' : '−') + '</button>' +
-            '</div>' +
-            '<div id="alg-balance-body" style="padding:10px;display:' + (minimized ? 'none' : 'block') + ';">' +
-                rowHtml('الفترة (ms)', '<input id="alg-b-interval" type="number" min="60000" value="' + interval + '" style="' + inputStyle + 'width:100%;" title="مثال: 7200000 = ساعتان">') +
-                rowHtml('احتياطي تجار', '<input id="alg-b-reserve" type="number" min="0" value="' + reserveMerchants + '" style="' + inputStyle + 'width:100%;">') +
-                rowHtml('عامل التوزيع (0-1)', '<input id="alg-b-factor" type="number" min="0" max="1" step="0.1" value="' + averageFactor + '" style="' + inputStyle + 'width:100%;" title="1 = توزيع متساوٍ تام، 0 = للبناء فقط">') +
-                rowHtml('عدد المجموعات', '<input id="alg-b-clusters" type="number" min="1" value="' + nrClusters + '" style="' + inputStyle + 'width:100%;" title="1 = موازنة عالمية، أكثر = مجموعات محلية">') +
-                rowHtml('تأخير الإرسال (ms)', '<input id="alg-b-delay" type="number" min="100" value="' + sendDelay + '" style="' + inputStyle + 'width:100%;">') +
-                '<button id="alg-b-save" style="' + btnStyle + 'background:#4a7c4a;margin-bottom:6px;">حفظ</button>' +
-                '<button id="alg-b-now" style="' + btnStyle + 'background:#2980b9;margin-bottom:6px;">تشغيل الآن</button>' +
-                '<button id="alg-b-run" style="' + btnStyle + 'background:' + (isRunning ? '#c0392b' : '#27ae60') + ';font-size:14px;margin-bottom:4px;">' + (isRunning ? 'إيقاف التلقائي' : 'تشغيل تلقائي') + '</button>' +
-                '<div id="alg-b-status" style="margin-top:6px;font-size:11px;color:#1a3a1a;text-align:center;min-height:16px;">' + (isRunning ? 'يحسب الجدول...' : 'متوقف') + '</div>' +
-                '<div style="text-align:center;margin-top:8px;font-size:10px;color:#4a7c4a;border-top:1px solid #a5d6a7;padding-top:6px;">AlGzawy • موازنة الموارد v1.0</div>' +
-            '</div>';
+    document.getElementById('alg-min-btn').onclick=function(){
+        var b=document.getElementById('alg-body');
+        var hidden=b.style.display==='none';
+        b.style.display=hidden?'block':'none';
+        this.textContent=hidden?'−':'+';
+    };
+    document.getElementById('alg-close-btn').onclick=function(){$('#alg-window').remove();};
+    document.getElementById('alg-start-btn').onclick=function(){balancingResources();};
 
-        document.body.appendChild(panel);
-        statusEl = document.getElementById('alg-b-status');
+    // Save on change
+    $('#alg-window input').on('change input',function(){
+        try{
+            localStorage.setItem(game_data.world+'_alg_bal_v1',JSON.stringify({
+                m:document.getElementById('alg-nr_merchants_reserve').value,
+                t:document.getElementById('alg-time_construction').value,
+                f:document.getElementById('alg-nr_average_factor').value,
+                c:document.getElementById('alg-nr_clusters').value,
+                mc:document.getElementById('alg-merchant_capacity').value,
+                mx:document.getElementById('alg-max_construction').checked
+            }));
+        }catch(e){}
+    });
+}
 
-        makeDraggable(panel, document.getElementById('alg-balance-hdr'));
+function buildTable(list_launches,obj_stats,list_production,list_clusters_stats){
+    // Stats
+    var sH='<table class="alg-T" style="font-size:12px;margin-bottom:4px;"><tr>'+
+        '<td class="alg-TH" colspan="2"><button class="alg-BTN" id="alg-res-btn">النتائج</button>&nbsp;<button class="alg-BTN" id="alg-clust-btn">المجموعات</button></td>'+
+        '<td class="alg-TH"><img src="https://dsen.innogamescdn.com/asset/c2e59f13/graphic/buildings/wood.png"/></td>'+
+        '<td class="alg-TH"><img src="https://dsen.innogamescdn.com/asset/c2e59f13/graphic/buildings/stone.png"/></td>'+
+        '<td class="alg-TH"><img src="https://dsen.innogamescdn.com/asset/c2e59f13/graphic/buildings/iron.png"/></td></tr>'+
+        '<tr><td colspan="2">الإجمالي</td><td>'+fmtN(obj_stats.total_wood_home)+'</td><td>'+fmtN(obj_stats.total_stone_home)+'</td><td>'+fmtN(obj_stats.total_iron_home)+'</td></tr>'+
+        '<tr><td colspan="2">المتوسط</td><td>'+fmtN(obj_stats.avg_wood)+'</td><td>'+fmtN(obj_stats.avg_stone)+'</td><td>'+fmtN(obj_stats.avg_iron)+'</td></tr>'+
+        '<tr><td colspan="2">الفائض</td><td>'+fmtN(obj_stats.total_wood_send)+'</td><td>'+fmtN(obj_stats.total_stone_send)+'</td><td>'+fmtN(obj_stats.total_iron_send)+'</td></tr>'+
+        '<tr><td colspan="2">العجز</td><td>'+fmtN(obj_stats.total_wood_get)+'</td><td>'+fmtN(obj_stats.total_stone_get)+'</td><td>'+fmtN(obj_stats.total_iron_get)+'</td></tr>'+
+    '</table>';
+    document.getElementById('alg-stats-div').innerHTML=sH;
 
-        document.getElementById('alg-balance-min').onclick = function () {
-            var body = document.getElementById('alg-balance-body');
-            var isMin = body.style.display === 'none';
-            body.style.display = isMin ? 'block' : 'none';
-            this.textContent = isMin ? '−' : '+';
-            GM_setValue('algzawy_balance_panelMinimized', !isMin);
-        };
+    // Sends table
+    var tH='<table class="alg-T" id="alg-sends-table" style="font-size:12px;"><tr>'+
+        '<td class="alg-TH">م</td><td class="alg-TH" style="min-width:120px;">القرية المستهدفة</td>'+
+        '<td class="alg-TH">أقصى مسافة</td><td class="alg-TH">إجمالي</td>'+
+        '<td class="alg-TH"><img src="https://dsen.innogamescdn.com/asset/c2e59f13/graphic/buildings/wood.png"/></td>'+
+        '<td class="alg-TH"><img src="https://dsen.innogamescdn.com/asset/c2e59f13/graphic/buildings/stone.png"/></td>'+
+        '<td class="alg-TH"><img src="https://dsen.innogamescdn.com/asset/c2e59f13/graphic/buildings/iron.png"/></td>'+
+        '<td class="alg-TH">إرسال</td></tr>';
 
-        document.getElementById('alg-b-save').onclick = saveSettings;
-
-        document.getElementById('alg-b-now').onclick = function () {
-            if (balanceTimer) clearTimeout(balanceTimer);
-            if (countdownTimer) clearInterval(countdownTimer);
-            runBalance();
-        };
-
-        document.getElementById('alg-b-run').onclick = toggleBot;
-
-        if (isRunning) scheduleNext();
-    }
-
-    function saveSettings() {
-        saveS('interval', parseInt(document.getElementById('alg-b-interval').value) || 7200000);
-        saveS('reserveMerchants', parseInt(document.getElementById('alg-b-reserve').value) || 0);
-        saveS('averageFactor', parseFloat(document.getElementById('alg-b-factor').value) || 1.0);
-        saveS('nrClusters', parseInt(document.getElementById('alg-b-clusters').value) || 1);
-        saveS('sendDelay', parseInt(document.getElementById('alg-b-delay').value) || 400);
-        setStatus('تم الحفظ ✓');
-        setTimeout(function () { setStatus(isRunning ? 'جاري العمل...' : 'متوقف'); }, 1500);
-    }
-
-    function toggleBot() {
-        if (isRunning) {
-            isRunning = false;
-            saveS('isRunning', false);
-            if (balanceTimer) clearTimeout(balanceTimer);
-            if (countdownTimer) clearInterval(countdownTimer);
-            var btn = document.getElementById('alg-b-run');
-            if (btn) { btn.textContent = 'تشغيل تلقائي'; btn.style.background = '#27ae60'; }
-            setStatus('متوقف');
-        } else {
-            saveSettings();
-            isRunning = true;
-            saveS('isRunning', true);
-            var btn = document.getElementById('alg-b-run');
-            if (btn) { btn.textContent = 'إيقاف التلقائي'; btn.style.background = '#c0392b'; }
-            runBalance();
+    if(list_launches.length===0){
+        tH+='<tr><td colspan="8" style="text-align:center;padding:18px;color:'+GOLD+';">الموارد متوازنة بالفعل &mdash; لا شيء للإرسال</td></tr>';
+    } else {
+        for(var i=0;i<list_launches.length;i++){
+            var dat=JSON.stringify(list_launches[i].send_resources).replace(/'/g,'&apos;');
+            tH+='<tr id="alg-row-'+i+'">'+
+                '<td style="text-align:center;">'+(i+1)+'</td>'+
+                '<td><a href="'+game_data.link_base_pure+'info_village&id='+list_launches[i].target_id+'" style="color:'+GOLD+';">'+list_launches[i].name_destination+'</a></td>'+
+                '<td style="text-align:center;">'+list_launches[i].distance.toFixed(1)+'</td>'+
+                '<td style="text-align:center;">'+fmtN(list_launches[i].total_send)+'</td>'+
+                '<td style="text-align:center;">'+fmtN(list_launches[i].total_wood)+'</td>'+
+                '<td style="text-align:center;">'+fmtN(list_launches[i].total_stone)+'</td>'+
+                '<td style="text-align:center;">'+fmtN(list_launches[i].total_iron)+'</td>'+
+                '<td style="text-align:center;"><button class="alg-SEND-BTN" data-row="'+i+'" data-tid="'+list_launches[i].target_id+'" data-res=\''+dat+'\'>إرسال</button></td>'+
+            '</tr>';
         }
     }
+    tH+='</table>';
+    document.getElementById('alg-sends-div').innerHTML=tH;
 
-    buildPanel();
+    // Bind send buttons
+    $('.alg-SEND-BTN').on('click',function(){
+        if($(this).is(':disabled'))return;
+        var row=$(this).data('row');
+        var tid=$(this).data('tid');
+        var res=JSON.parse($(this).attr('data-res'));
+        $('.alg-SEND-BTN').prop('disabled',true);
+        sendResources(tid,res);
+        window.setTimeout(function(){
+            $('#alg-row-'+row).remove();
+            $('.alg-SEND-BTN').prop('disabled',false);
+        },250);
+    });
+
+    // Enter key
+    if($('.alg-SEND-BTN').length>0)$('.alg-SEND-BTN').first().focus();
+    window.onkeydown=function(e){if(e.which===13&&$('.alg-SEND-BTN:not(:disabled)').length>0)$('.alg-SEND-BTN:not(:disabled)').first().click();};
+
+    // Stats buttons
+    document.getElementById('alg-res-btn').onclick=function(){buildResultsDialog(list_production,obj_stats);};
+    document.getElementById('alg-clust-btn').onclick=function(){buildClustersDialog(list_clusters_stats);};
+}
+
+function buildResultsDialog(list_production,obj_stats){
+    var html='<div style="max-height:70vh;overflow:auto;direction:rtl;"><table class="alg-T" style="font-size:12px;min-width:500px;">'+
+        '<tr><td class="alg-TH">الإحداثيات</td><td class="alg-TH">النقاط</td><td class="alg-TH">تجار</td>'+
+        '<td class="alg-TH" colspan="2"><img src="https://dsen.innogamescdn.com/asset/c2e59f13/graphic/buildings/wood.png"/></td>'+
+        '<td class="alg-TH" colspan="2"><img src="https://dsen.innogamescdn.com/asset/c2e59f13/graphic/buildings/stone.png"/></td>'+
+        '<td class="alg-TH" colspan="2"><img src="https://dsen.innogamescdn.com/asset/c2e59f13/graphic/buildings/iron.png"/></td></tr>';
+    for(var i=0;i<list_production.length;i++){
+        var p=list_production[i];
+        var gC=p.result_wood>=0?'#013e27':'#5f0000';
+        var sC=p.result_stone>=0?'#013e27':'#5f0000';
+        var iC=p.result_iron>=0?'#013e27':'#5f0000';
+        html+='<tr><td><a href="'+game_data.link_base_pure+'info_village&id='+p.id+'" style="color:'+GOLD+';">'+p.coord+'</a></td>'+
+            '<td style="text-align:center;">'+fmtN(p.points||0)+'</td>'+
+            '<td style="text-align:center;">'+(p.merchantAvailable||0)+'/'+p.merchants_total+'</td>'+
+            '<td style="text-align:center;">'+fmtN(p.wood)+'</td><td style="background:'+gC+';text-align:center;">'+(p.result_wood>=0?'+':'')+fmtN(p.result_wood||0)+'</td>'+
+            '<td style="text-align:center;">'+fmtN(p.stone)+'</td><td style="background:'+sC+';text-align:center;">'+(p.result_stone>=0?'+':'')+fmtN(p.result_stone||0)+'</td>'+
+            '<td style="text-align:center;">'+fmtN(p.iron)+'</td><td style="background:'+iC+';text-align:center;">'+(p.result_iron>=0?'+':'')+fmtN(p.result_iron||0)+'</td></tr>';
+    }
+    html+='</table></div>';
+    Dialog.show('content',html);
+}
+
+function buildClustersDialog(list_clusters_stats){
+    var html='<div style="max-height:70vh;overflow:auto;direction:rtl;"><table class="alg-T" style="font-size:12px;min-width:400px;">'+
+        '<tr><td class="alg-TH">م</td><td class="alg-TH">قرى</td><td class="alg-TH">المركز</td><td class="alg-TH">أقصى مسافة</td></tr>';
+    for(var i=0;i<list_clusters_stats.length;i++){
+        var c=list_clusters_stats[i];
+        html+='<tr><td style="text-align:center;">'+(i+1)+'</td><td style="text-align:center;">'+c.nr_coords+'</td><td style="text-align:center;">'+c.center+'</td><td style="text-align:center;">'+c.max_distance.toFixed(1)+'</td></tr>';
+    }
+    html+='</table></div>';
+    Dialog.show('content',html);
+}
+
+// ===== INIT =====
+createMainInterface();
 
 })();
