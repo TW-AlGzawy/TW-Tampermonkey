@@ -3,6 +3,7 @@
 
     var S = unsafeWindow.ALGZAWY_SETTINGS;
     var PAGE_IDX_KEY = 'alg_farm_pageIdx';
+    var LAST_ATTACK_PREFIX = 'alg_farm_lastAttack_';
 
     var isRunning = !!S.isRunning;
     var switchTimer = null;
@@ -10,6 +11,8 @@
     var botMonitor = null;
     var statusEl = null;
     var lastBotAlert = 0;
+
+    var CARRY = { lc: 80, hc: 50, spear: 25, sword: 25, axe: 25, ram: 0, catapult: 0 };
 
     function getS(key, def) {
         var v = S[key];
@@ -66,6 +69,9 @@
         var swt = getS('switchDelay', 30000);
         var ref = getS('refresh', 600000);
         var pgs = getS('pagesToFarm', 0);
+        var maxWallA = getS('maxWallForA', 5);
+        var minWallB = getS('minWallForB', 0);
+        var refarmDelay = getS('refarmDelay', 7200000);
 
         var panel = document.createElement('div');
         panel.id = 'alg-farm-panel';
@@ -81,18 +87,18 @@
             'font-size:13px',
             'color:#3b1f00',
             'direction:rtl',
-            'min-width:215px',
+            'min-width:220px',
             'box-shadow:3px 3px 10px rgba(0,0,0,0.5)',
             'user-select:none'
         ].join(';');
 
         panel.innerHTML =
             '<div id="alg-farm-hdr" style="background:linear-gradient(to bottom,#8b4513,#5c2d0a);color:#f4e4bc;padding:7px 10px;border-radius:6px 6px 0 0;cursor:move;display:flex;justify-content:space-between;align-items:center;">' +
-                '<b>AlGzawy - النهب</b>' +
+                '<b>AlGzawy - النهب الذكي</b>' +
                 '<button id="alg-farm-min" style="background:none;border:none;color:#f4e4bc;cursor:pointer;font-size:16px;line-height:1;padding:0 4px;">' + (minimized ? '+' : '−') + '</button>' +
             '</div>' +
             '<div id="alg-farm-body" style="padding:10px;display:' + (minimized ? 'none' : 'block') + ';">' +
-                row('القالب', '<select id="alg-f-tpl" style="' + inputStyle + 'width:100%;">' + opt('A', tpl) + opt('B', tpl) + opt('C', tpl) + '</select>') +
+                row('القالب الافتراضي', '<select id="alg-f-tpl" style="' + inputStyle + 'width:100%;">' + opt('A', tpl) + opt('B', tpl) + opt('C', tpl) + '</select>') +
                 '<div style="margin-bottom:6px;">' +
                     '<label style="display:block;margin-bottom:2px;font-weight:bold;">التأخير (ms)</label>' +
                     '<div style="display:flex;gap:4px;">' +
@@ -103,10 +109,14 @@
                 row('تنقل (ms)', '<input id="alg-f-swt" type="number" min="1000" value="' + swt + '" style="' + inputStyle + 'width:100%;">') +
                 row('تحديث (ms)', '<input id="alg-f-ref" type="number" min="10000" value="' + ref + '" style="' + inputStyle + 'width:100%;">') +
                 row('عدد الصفحات', '<input id="alg-f-pgs" type="number" min="0" value="' + pgs + '" style="' + inputStyle + 'width:100%;">') +
+                '<div style="border-top:1px solid #c1a264;margin:8px 0 6px;padding-top:6px;font-weight:bold;color:#5c2d0a;">⚙ الفلاتر الذكية</div>' +
+                row('حائط A ≤', '<input id="alg-f-maxwalla" type="number" min="0" max="20" value="' + maxWallA + '" style="' + inputStyle + 'width:100%;" title="استخدم القالب A إذا كان مستوى الحائط أقل من أو يساوي هذه القيمة">') +
+                row('حائط B ≥', '<input id="alg-f-minwallb" type="number" min="0" max="20" value="' + minWallB + '" style="' + inputStyle + 'width:100%;" title="استخدم القالب B إذا كان مستوى الحائط أكبر من أو يساوي هذه القيمة">') +
+                row('إعادة نهب بعد (ms)', '<input id="alg-f-refarm" type="number" min="0" value="' + refarmDelay + '" style="' + inputStyle + 'width:100%;" title="0 = بدون قيد. مدة الانتظار قبل إعادة نهب نفس القرية">') +
                 '<button id="alg-f-save" style="' + btnStyle + 'background:#7a5c2a;margin-bottom:6px;">حفظ</button>' +
                 '<button id="alg-f-run" style="' + btnStyle + 'background:' + (isRunning ? '#c0392b' : '#27ae60') + ';font-size:14px;margin-bottom:4px;">' + (isRunning ? 'إيقاف' : 'تشغيل') + '</button>' +
                 '<div id="alg-f-status" style="margin-top:6px;font-size:11px;color:#542e0a;text-align:center;min-height:16px;">' + (isRunning ? 'جاري العمل...' : 'متوقف') + '</div>' +
-                '<div style="text-align:center;margin-top:8px;font-size:10px;color:#7a5c2a;border-top:1px solid #c1a264;padding-top:6px;">AlGzawy • الإصدار 1.1</div>' +
+                '<div style="text-align:center;margin-top:8px;font-size:10px;color:#7a5c2a;border-top:1px solid #c1a264;padding-top:6px;">AlGzawy • الإصدار 2.0 ذكي</div>' +
             '</div>';
 
         document.body.appendChild(panel);
@@ -137,6 +147,9 @@
         saveS('switchDelay', parseInt(document.getElementById('alg-f-swt').value) || 30000);
         saveS('refresh', parseInt(document.getElementById('alg-f-ref').value) || 600000);
         saveS('pagesToFarm', parseInt(document.getElementById('alg-f-pgs').value) || 0);
+        saveS('maxWallForA', parseInt(document.getElementById('alg-f-maxwalla').value));
+        saveS('minWallForB', parseInt(document.getElementById('alg-f-minwallb').value));
+        saveS('refarmDelay', parseInt(document.getElementById('alg-f-refarm').value) || 0);
         setStatus('تم الحفظ ✓');
         setTimeout(function () { setStatus(isRunning ? 'جاري العمل...' : 'متوقف'); }, 1500);
     }
@@ -233,39 +246,123 @@
         }, 2000);
     }
 
+    // ===================== SMART PARSING =====================
+
+    function parseWallLevel(tr) {
+        var tds = tr.querySelectorAll('td');
+        for (var i = 0; i < tds.length; i++) {
+            var txt = tds[i].textContent.trim();
+            if (txt === '?' || txt === '') continue;
+            var n = parseInt(txt);
+            if (!isNaN(n) && n >= 0 && n <= 20 && tds[i].style.textAlign === 'center') {
+                return n;
+            }
+        }
+        return -1;
+    }
+
+    function parseResources(tr) {
+        var resSpans = tr.querySelectorAll('span.res');
+        if (resSpans.length < 3) return null;
+        var wood = parseInt(resSpans[0].textContent) || 0;
+        var stone = parseInt(resSpans[1].textContent) || 0;
+        var iron = parseInt(resSpans[2].textContent) || 0;
+        return wood + stone + iron;
+    }
+
+    function hasCurrentAttack(tr) {
+        return !!tr.querySelector('img[src*="command/attack.webp"], img[src*="attack_small"]');
+    }
+
+    function getVillageId(tr) {
+        var link = tr.querySelector('a[href*="village="]');
+        if (!link) return null;
+        var m = link.href.match(/village=(\d+)/);
+        return m ? m[1] : null;
+    }
+
+    function shouldSkipRefarm(villageId) {
+        var refarmDelay = getS('refarmDelay', 7200000);
+        if (!refarmDelay || refarmDelay <= 0) return false;
+        var lastAttack = parseInt(sessionStorage.getItem(LAST_ATTACK_PREFIX + villageId) || '0');
+        return (Date.now() - lastAttack) < refarmDelay;
+    }
+
+    function markAttacked(villageId) {
+        if (villageId) {
+            sessionStorage.setItem(LAST_ATTACK_PREFIX + villageId, Date.now().toString());
+        }
+    }
+
+    function chooseTemplate(tr, defaultTpl) {
+        var wallLevel = parseWallLevel(tr);
+        var maxWallA = getS('maxWallForA', 5);
+        var minWallB = getS('minWallForB', 0);
+
+        if (wallLevel === -1) return defaultTpl.toLowerCase();
+
+        if (wallLevel <= maxWallA && tr.querySelector('.farm_icon_a')) return 'a';
+        if (wallLevel >= minWallB && tr.querySelector('.farm_icon_b')) return 'b';
+        return defaultTpl.toLowerCase();
+    }
+
     // ===================== FARM LOGIC =====================
     function farmRows() {
-        var tpl = getS('template', 'A').toLowerCase();
+        var defaultTpl = getS('template', 'A');
         var minD = getS('minDelay', 200);
         var maxD = getS('maxDelay', 300);
 
         var allRows = document.querySelectorAll('#plunder_list tbody tr');
-        var rows = [];
+        var targets = [];
+        var skippedRefarm = 0;
+        var skippedAttack = 0;
+
         for (var i = 0; i < allRows.length; i++) {
-            if (allRows[i].querySelector('.farm_icon_' + tpl)) {
-                rows.push(allRows[i]);
+            var tr = allRows[i];
+
+            if (hasCurrentAttack(tr)) {
+                skippedAttack++;
+                continue;
             }
+
+            var villageId = getVillageId(tr);
+            if (villageId && shouldSkipRefarm(villageId)) {
+                skippedRefarm++;
+                continue;
+            }
+
+            var tpl = chooseTemplate(tr, defaultTpl);
+
+            if (!tr.querySelector('.farm_icon_' + tpl)) continue;
+
+            targets.push({ tr: tr, tpl: tpl, villageId: villageId });
         }
 
-        if (rows.length === 0) {
-            setStatus('لا توجد أهداف في هذه الصفحة');
+        if (targets.length === 0) {
+            var skipMsg = '';
+            if (skippedAttack > 0) skipMsg += ' (' + skippedAttack + ' تحت هجوم)';
+            if (skippedRefarm > 0) skipMsg += ' (' + skippedRefarm + ' انتظار إعادة نهب)';
+            setStatus('لا توجد أهداف' + skipMsg);
             scheduleNavigation();
             return;
         }
 
-        setStatus('يحصد ' + rows.length + ' قرية...');
+        setStatus('يحصد ' + targets.length + ' قرية...');
 
         var cumDelay = 0;
-        rows.forEach(function (row) {
+        targets.forEach(function (target) {
             var delay = Math.floor(Math.random() * (maxD - minD + 1)) + minD;
             cumDelay += delay;
-            (function (r, d) {
+            (function (t, d) {
                 setTimeout(function () {
                     if (!isRunning) return;
-                    var btn = r.querySelector('.farm_icon_' + tpl);
-                    if (btn) btn.click();
+                    var btn = t.tr.querySelector('.farm_icon_' + t.tpl);
+                    if (btn) {
+                        btn.click();
+                        markAttacked(t.villageId);
+                    }
                 }, d);
-            })(row, cumDelay);
+            })(target, cumDelay);
         });
 
         setTimeout(function () {
