@@ -360,11 +360,14 @@
         var maxWallA = getS('maxWallForA', 5);
         var minWallB = getS('minWallForB', 6);
 
-        if (useA && wallLevel !== -1 && wallLevel <= maxWallA && tr.querySelector('.farm_icon_a')) return 'a';
+        // Wall-based rules (only when thresholds are set)
+        if (useA && maxWallA > 0 && wallLevel !== -1 && wallLevel <= maxWallA && tr.querySelector('.farm_icon_a')) return 'a';
         if (useB && minWallB > 0 && wallLevel !== -1 && wallLevel >= minWallB && tr.querySelector('.farm_icon_b')) return 'b';
-        if (useC && tr.querySelector('.farm_icon_c')) return 'c';
+
+        // Fallback: first available enabled template (A → B → C)
         if (useA && tr.querySelector('.farm_icon_a')) return 'a';
         if (useB && tr.querySelector('.farm_icon_b')) return 'b';
+        if (useC && tr.querySelector('.farm_icon_c')) return 'c';
         return null;
     }
 
@@ -403,9 +406,12 @@
         }
 
         if (targets.length === 0) {
-            var skipMsg = '';
+            var total = allRows.length;
+            var skipMsg = ' [' + total + ' صف]';
             if (skippedAttack > 0) skipMsg += ' (' + skippedAttack + ' تحت هجوم)';
             if (skippedRefarm > 0) skipMsg += ' (' + skippedRefarm + ' انتظار إعادة نهب)';
+            var noIcon = total - skippedAttack - skippedRefarm;
+            if (noIcon > 0) skipMsg += ' (' + noIcon + ' بلا أيقونة)';
             setStatus('لا توجد أهداف' + skipMsg);
             scheduleNavigation();
             return;
