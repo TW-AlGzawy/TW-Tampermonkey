@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AlGzawy-Farm Bot-النهب
 // @namespace    AlGzawy-Scripts-farm-loader
-// @version      3.0
+// @version      3.1
 // @description  يقوم بتحميل وتشغيل بوت النهب الآمن من AlGzawy
 // @author       AlGzawy
 // @include      https://*.tribalwars.*/game.php?*screen=am_farm*
@@ -63,7 +63,8 @@
                 if (response.status === 200) {
                     const match = response.responseText.match(/@version\s+([0-9.]+)/);
                     if (match && match[1]) {
-                        if (match[1] > CURRENT_VERSION) {
+                        // FIX: مقارنة الإصدارات بشكل صحيح عبر parseFloat بدلاً من المقارنة النصية
+                        if (parseFloat(match[1]) > parseFloat(CURRENT_VERSION)) {
                             alert(`تحديث مطلوب!\n\nالإصدار الحالي: ${CURRENT_VERSION}\nالإصدار الجديد: ${match[1]}\n\nالرجاء تحديث السكربت.`);
                             updateButton.textContent = 'يوجد تحديث!';
                             updateButton.style.color = 'red';
@@ -110,6 +111,8 @@
         onload: function (response) {
             if (response.status === 200) {
                 console.log('[AlGzawy Farm Loader] تم التحميل. جاري التشغيل...');
+                // ملاحظة: eval() مستخدم هنا لتشغيل السكربت المحمّل من GitHub
+                // هذا ضروري لآلية عمل المحمل، تأكد من أمان مصدر السكربت دائماً
                 eval(response.responseText);
             } else if (response.status === 404) {
                 alert('تم إيقاف البوت من قبل المطور. يرجى التواصل مع AlGzawy.');
