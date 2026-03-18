@@ -179,7 +179,8 @@
 
         setStatus('جاري الفحص...');
 
-        fetch(url, { credentials: 'same-origin' })
+        var pageFetch = (typeof unsafeWindow !== 'undefined' && unsafeWindow.fetch) ? unsafeWindow.fetch.bind(unsafeWindow) : fetch;
+        pageFetch(url, { credentials: 'include' })
             .then(function (resp) {
                 if (!isRunning) return null;
                 if (!resp.ok) {
@@ -196,7 +197,7 @@
             })
             .catch(function (err) {
                 if (!isRunning) return;
-                setStatus('خطأ في الفحص');
+                setStatus('خطأ في الفحص: ' + (err.message || err));
                 console.warn('[AlGzawy Attacks] fetch error:', err);
                 updateLastCheck();
                 scheduleNext();
