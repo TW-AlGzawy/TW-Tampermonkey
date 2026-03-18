@@ -166,6 +166,28 @@
         return m ? m[1] : null;
     }
 
+    function gmFetch(url, onSuccess, onFail) {
+        GM_xmlhttpRequest({
+            method: 'GET',
+            url: url,
+            anonymous: false,
+            onload: function (resp) {
+                if (resp.finalUrl && resp.finalUrl.indexOf('session-expired') !== -1) {
+                    onFail('انتهت الجلسة - أعد تسجيل الدخول');
+                    return;
+                }
+                if (resp.status >= 200 && resp.status < 300) {
+                    onSuccess(resp.responseText);
+                } else {
+                    onFail('فشل الفحص (' + resp.status + ')');
+                }
+            },
+            onerror: function () { onFail('خطأ في الشبكة'); },
+            ontimeout: function () { onFail('انتهت مهلة الاتصال'); },
+            timeout: 15000
+        });
+    }
+
     function checkAttacks() {
         if (!isRunning) return;
 
@@ -179,59 +201,41 @@
         var villageId = getCurrentVillageId();
         setStatus('جاري الفحص...');
 
-        var pageFetch = (typeof unsafeWindow !== 'undefined' && unsafeWindow.fetch) ? unsafeWindow.fetch.bind(unsafeWindow) : fetch;
-
         var overviewUrl = base + '?village=' + (villageId || '') + '&screen=overview&t=' + Date.now();
-        pageFetch(overviewUrl, { credentials: 'include' })
-            .then(function (resp) {
-                if (!isRunning) return null;
-                if (!resp.ok) { setStatus('فشل الفحص (' + resp.status + ')'); return null; }
-                return resp.text();
-            })
-            .then(function (html) {
-                if (!isRunning || !html) return;
-                var count = extractIncomingsCount(html);
-                console.log('[AlGzawy Attacks] incomings count from game_data:', count);
-                if (count === 0) {
-                    setStatus('لا توجد هجمات');
-                    saveKnownAttacks([]);
-                    GM_setValue(PREFIX + 'lastIncomingsCount', 0);
-                    updateLastCheck();
-                    scheduleNext();
-                    return;
-                }
-                fetchAttackDetails(base, villageId, count, pageFetch);
-            })
-            .catch(function (err) {
-                if (!isRunning) return;
-                setStatus('خطأ في الفحص: ' + (err.message || err));
-                console.warn('[AlGzawy Attacks] overview fetch error:', err);
+        gmFetch(overviewUrl, function (html) {
+            if (!isRunning) return;
+            var count = extractIncomingsCount(html);
+            console.log('[AlGzawy Attacks] incomings count from game_data:', count);
+            if (count === 0) {
+                setStatus('لا توجد هجمات');
+                saveKnownAttacks([]);
+                GM_setValue(PREFIX + 'lastIncomingsCount', 0);
                 updateLastCheck();
                 scheduleNext();
-            });
+                return;
+            }
+            fetchAttackDetails(base, villageId, count);
+        }, function (err) {
+            if (!isRunning) return;
+            setStatus('خطأ في الفحص: ' + err);
+            if (err.indexOf('جلسة') !== -1) stopBot();
+            else { updateLastCheck(); scheduleNext(); }
+        });
     }
 
-    function fetchAttackDetails(base, villageId, incomingsCount, pageFetch) {
+    function fetchAttackDetails(base, villageId, incomingsCount) {
         var detailUrl = base + '?village=' + (villageId || '') + '&screen=overview_villages&mode=incomings&type=unignored&subtype=attacks&page=-1&t=' + Date.now();
-        pageFetch(detailUrl, { credentials: 'include' })
-            .then(function (resp) {
-                if (!isRunning) return null;
-                if (!resp.ok) { setStatus('فشل جلب تفاصيل الهجمات (' + resp.status + ')'); return null; }
-                return resp.text();
-            })
-            .then(function (html) {
-                if (!isRunning || !html) return;
-                parseAndAlert(html, incomingsCount);
-                updateLastCheck();
-                scheduleNext();
-            })
-            .catch(function (err) {
-                if (!isRunning) return;
-                setStatus('خطأ في جلب التفاصيل: ' + (err.message || err));
-                console.warn('[AlGzawy Attacks] details fetch error:', err);
-                updateLastCheck();
-                scheduleNext();
-            });
+        gmFetch(detailUrl, function (html) {
+            if (!isRunning) return;
+            parseAndAlert(html, incomingsCount);
+            updateLastCheck();
+            scheduleNext();
+        }, function (err) {
+            if (!isRunning) return;
+            setStatus('خطأ في جلب التفاصيل: ' + err);
+            if (err.indexOf('جلسة') !== -1) stopBot();
+            else { updateLastCheck(); scheduleNext(); }
+        });
     }
 
     function extractIncomingsCount(html) {
