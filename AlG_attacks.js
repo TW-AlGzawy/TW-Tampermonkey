@@ -178,26 +178,28 @@
 
         setStatus('جاري الفحص...');
 
-        GM_xmlhttpRequest({
-            method: 'GET',
-            url: url,
-            onload: function (resp) {
-                if (!isRunning) return;
-                if (resp.status === 200) {
-                    parseAndAlert(resp.responseText);
-                } else {
+        fetch(url, { credentials: 'same-origin' })
+            .then(function (resp) {
+                if (!isRunning) return null;
+                if (!resp.ok) {
                     setStatus('فشل الفحص (' + resp.status + ')');
+                    return null;
                 }
+                return resp.text();
+            })
+            .then(function (html) {
+                if (!isRunning || !html) return;
+                parseAndAlert(html);
                 updateLastCheck();
                 scheduleNext();
-            },
-            onerror: function () {
+            })
+            .catch(function (err) {
                 if (!isRunning) return;
-                setStatus('خطأ في الشبكة');
+                setStatus('خطأ في الفحص');
+                console.warn('[AlGzawy Attacks] fetch error:', err);
                 updateLastCheck();
                 scheduleNext();
-            }
-        });
+            });
     }
 
     function scheduleNext() {
