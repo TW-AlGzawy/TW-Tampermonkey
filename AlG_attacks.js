@@ -94,7 +94,7 @@
                 '<button id="alg-atk-run" style="' + btnStyle + 'background:' + (isRunning ? '#c0392b' : '#27ae60') + ';font-size:14px;margin-bottom:4px;">' + (isRunning ? 'إيقاف' : 'تشغيل') + '</button>' +
                 '<div id="alg-atk-status" style="margin-top:6px;font-size:11px;color:#542e0a;text-align:center;min-height:16px;">' + (isRunning ? 'يراقب...' : 'متوقف') + '</div>' +
                 '<div id="alg-atk-lastcheck" style="margin-top:4px;font-size:10px;color:#7a5c2a;text-align:center;min-height:14px;"></div>' +
-                '<div style="text-align:center;margin-top:8px;font-size:10px;color:#7a5c2a;border-top:1px solid #c1a264;padding-top:6px;">AlGzawy • تنبيه الهجمات 1.0</div>' +
+                '<div style="text-align:center;margin-top:8px;font-size:10px;color:#7a5c2a;border-top:1px solid #c1a264;padding-top:6px;">AlGzawy • تنبيه الهجمات 1.1</div>' +
             '</div>';
 
         document.body.appendChild(panel);
