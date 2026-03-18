@@ -90,6 +90,7 @@
                 '<div style="margin-bottom:6px;"><label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="alg-atk-sound" ' + (alertSound ? 'checked' : '') + ' style="width:16px;height:16px;cursor:pointer;"><span style="font-weight:bold;">صوت تنبيه</span></label></div>' +
                 '<div style="margin-bottom:6px;"><label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="alg-atk-village" ' + (showVillage ? 'checked' : '') + ' style="width:16px;height:16px;cursor:pointer;"><span style="font-weight:bold;">أرسل تفاصيل القرية</span></label></div>' +
                 '<button id="alg-atk-test" style="' + btnStyle + 'background:#2980b9;margin-bottom:6px;">اختبار التليجرام</button>' +
+                '<button id="alg-atk-fakeatk" style="' + btnStyle + 'background:#8e44ad;margin-bottom:6px;">اختبار هجوم وهمي</button>' +
                 '<button id="alg-atk-save" style="' + btnStyle + 'background:#7a5c2a;margin-bottom:6px;">حفظ</button>' +
                 '<button id="alg-atk-run" style="' + btnStyle + 'background:' + (isRunning ? '#c0392b' : '#27ae60') + ';font-size:14px;margin-bottom:4px;">' + (isRunning ? 'إيقاف' : 'تشغيل') + '</button>' +
                 '<div id="alg-atk-status" style="margin-top:6px;font-size:11px;color:#542e0a;text-align:center;min-height:16px;">' + (isRunning ? 'يراقب...' : 'متوقف') + '</div>' +
@@ -113,6 +114,7 @@
         document.getElementById('alg-atk-save').onclick = saveSettings;
         document.getElementById('alg-atk-run').onclick = toggleBot;
         document.getElementById('alg-atk-test').onclick = testTelegram;
+        document.getElementById('alg-atk-fakeatk').onclick = simulateFakeAttack;
 
         if (isRunning) startBot();
     }
@@ -406,6 +408,30 @@
                 console.warn('[AlGzawy Attacks] خطأ في إرسال تليجرام');
             }
         });
+    }
+
+    function simulateFakeAttack() {
+        var fakeId = '999' + Date.now();
+        var fakeHtml = '<!DOCTYPE html><html><body>' +
+            '<table id="incomings_table"><tbody>' +
+            '<tr class="row_a">' +
+            '<td><input type="checkbox" name="command_ids[' + fakeId + ']" value="' + fakeId + '"></td>' +
+            '<td><a href="?village=12345&screen=info_village">قرية الاختبار (123|456) K54</a></td>' +
+            '<td><a href="?village=99999&screen=info_village">قرية المهاجم (456|789) K54</a></td>' +
+            '<td><a href="?screen=info_player&id=1">لاعب وهمي</a></td>' +
+            '<td>3.5</td>' +
+            '<td>اليوم الساعة 14:30:00</td>' +
+            '<td>00:15:00</td>' +
+            '<td>-</td>' +
+            '</tr>' +
+            '</tbody></table>' +
+            '</body></html>';
+
+        saveKnownAttacks([]);
+        GM_setValue(PREFIX + 'lastIncomingsCount', 0);
+        setStatus('اختبار هجوم وهمي...');
+        parseAndAlert(fakeHtml, 1);
+        updateLastCheck();
     }
 
     function testTelegram() {
