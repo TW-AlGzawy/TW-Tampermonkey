@@ -46,6 +46,7 @@
     for (const key in DEFAULTS) {
         settingsForExternalCode[key] = GM_getValue(SETTINGS_PREFIX + key, DEFAULTS[key]);
     }
+    settingsForExternalCode['version'] = CURRENT_VERSION;
 
     unsafeWindow.ALGZAWY_ATK_SETTINGS = settingsForExternalCode;
 
