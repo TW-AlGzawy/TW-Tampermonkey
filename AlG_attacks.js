@@ -174,7 +174,8 @@
             return;
         }
 
-        var url = base + '?screen=overview_villages&mode=incomings&type=attacks&group=0&page=-1&t=' + Date.now();
+        var villageId = getCurrentVillageId();
+        var url = base + '?village=' + (villageId || '') + '&screen=overview_villages&mode=incomings&type=unignored&subtype=attacks&page=-1&t=' + Date.now();
 
         setStatus('جاري الفحص...');
 
@@ -264,13 +265,18 @@
     }
 
     function extractAttackId(row) {
-        var links = row.querySelectorAll('a[href]');
-        for (var i = 0; i < links.length; i++) {
-            var m = links[i].href.match(/id=(\d+)/);
+        var input = row.querySelector('input[name^="command_ids["]');
+        if (input) {
+            var m = input.name.match(/command_ids\[(\d+)\]/);
             if (m) return m[1];
         }
-        var m2 = row.innerHTML.match(/id=(\d+)/);
-        return m2 ? m2[1] : null;
+        var links = row.querySelectorAll('a[href]');
+        for (var i = 0; i < links.length; i++) {
+            var href = links[i].getAttribute('href') || '';
+            var m2 = href.match(/[?&]id=(\d+)/);
+            if (m2) return m2[1];
+        }
+        return null;
     }
 
     function getKnownAttacks() {
@@ -286,21 +292,22 @@
         var msg = 'تنبيه هجوم على Tribal Wars!\n\n';
 
         var cells = row.querySelectorAll('td');
-        if (cells.length >= 2) {
-            var targetCell = cells[0] ? cells[0].textContent.trim() : '';
-            var originCell = cells[1] ? cells[1].textContent.trim() : '';
-            var timeCell = cells[cells.length - 2] ? cells[cells.length - 2].textContent.trim() : '';
+        // td[0]=أمر, td[1]=الهدف, td[2]=البداية, td[3]=اللاعب, td[4]=المسافة, td[5]=توقيت الوصول, td[6]=يصل في
+        var targetCell  = cells[1] ? cells[1].textContent.trim() : '';
+        var originCell  = cells[2] ? cells[2].textContent.trim() : '';
+        var playerCell  = cells[3] ? cells[3].textContent.trim() : '';
+        var distCell    = cells[4] ? cells[4].textContent.trim() : '';
+        var arrivalCell = cells[5] ? cells[5].textContent.trim() : '';
+        var inCell      = cells[6] ? cells[6].textContent.trim() : '';
 
-            if (getS('showVillage', true) && targetCell) {
-                msg += 'القرية المستهدفة: ' + targetCell + '\n';
-            }
-            if (originCell) {
-                msg += 'من: ' + originCell + '\n';
-            }
-            if (timeCell) {
-                msg += 'وقت الوصول: ' + timeCell + '\n';
-            }
+        if (getS('showVillage', true) && targetCell) {
+            msg += 'القرية المستهدفة: ' + targetCell + '\n';
         }
+        if (originCell) msg += 'من قرية: ' + originCell + '\n';
+        if (playerCell) msg += 'اللاعب: ' + playerCell + '\n';
+        if (distCell)   msg += 'المسافة: ' + distCell + '\n';
+        if (arrivalCell) msg += 'وقت الوصول: ' + arrivalCell + '\n';
+        if (inCell)     msg += 'يصل في: ' + inCell + '\n';
 
         var attackId = extractAttackId(row);
         if (attackId) {
