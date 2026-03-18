@@ -2,7 +2,6 @@
     'use strict';
 
     var S = unsafeWindow.ALGZAWY_SETTINGS;
-    // ===================== FIX #4: استخدام localStorage بدلاً من sessionStorage لضمان استمرارية البيانات =====================
     var PAGE_IDX_KEY = 'alg_farm_pageIdx';
     var LAST_ATTACK_PREFIX = 'alg_farm_lastAttack_';
     var ATTACK_COUNT_PREFIX = 'alg_farm_attackCount_';
@@ -18,17 +17,6 @@
     var sessionAttackC = parseInt(sessionStorage.getItem('alg_farm_session_C') || '0');
 
     var CARRY = { lc: 80, hc: 50, spear: 25, sword: 25, axe: 25, ram: 0, catapult: 0 };
-
-    // ===================== FIX #4: دوال مساعدة لـ localStorage =====================
-    function lsGet(key) {
-        try { return localStorage.getItem(key); } catch(e) { return null; }
-    }
-    function lsSet(key, val) {
-        try { localStorage.setItem(key, val); } catch(e) {}
-    }
-    function lsRemove(key) {
-        try { localStorage.removeItem(key); } catch(e) {}
-    }
 
     function getS(key, def) {
         var stored = GM_getValue('algzawy_farm_bot_' + key, undefined);
@@ -140,11 +128,11 @@
                 row('عدد الصفحات', '<input id="alg-f-pgs" type="number" min="0" value="' + pgs + '" style="' + inputStyle + 'width:100%;">') +
                 '<div style="border-top:1px solid #c1a264;margin:8px 0 6px;padding-top:6px;font-weight:bold;color:#5c2d0a;">⚙ الفلاتر الذكية</div>' +
                 row('حائط A ≤', '<input id="alg-f-maxwalla" type="number" min="0" max="20" value="' + maxWallA + '" style="' + inputStyle + 'width:100%;" title="استخدم القالب A إذا كان مستوى الحائط أقل من أو يساوي هذه القيمة">') +
-                row('حائط B ≤', '<input id="alg-f-maxwallb" type="number" min="0" max="20" value="' + maxWallB + '" style="' + inputStyle + 'width:100%;" title="استخدم القالب B إذا كان مستوى الحائط أقل من أو يساوي هذه القيمة. اتركه 0 لتعطيل هذا الفلتر">') +
+                row('حائط B ≤', '<input id="alg-f-maxwallb" type="number" min="0" max="20" value="' + maxWallB + '" style="' + inputStyle + 'width:100%;" title="استخدم القالب B إذا كان مستوى الحائط أقل من أو يساوي هذه القيمة">') +
                 row('إعادة نهب بعد (ms)', '<input id="alg-f-refarm" type="number" min="0" value="' + refarmDelay + '" style="' + inputStyle + 'width:100%;" title="0 = بدون قيد. مدة الانتظار قبل إعادة نهب نفس القرية">') +
                 '<div style="margin-bottom:6px;"><label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="alg-f-skipattacked" ' + (skipAttacked ? 'checked' : '') + ' style="width:16px;height:16px;cursor:pointer;"><span style="font-weight:bold;">تخطي القرى تحت هجوم</span></label></div>' +
                 '<div style="margin-bottom:6px;"><label style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:4px;"><input type="checkbox" id="alg-f-maxattena" ' + (maxAttacksEnabled ? 'checked' : '') + ' style="width:16px;height:16px;cursor:pointer;"><span style="font-weight:bold;">حد هجمات/قرية</span></label><input id="alg-f-maxatt" type="number" min="1" value="' + maxAttacksPerVillage + '" style="' + inputStyle + 'width:100%;"></div>' +
-                '<div style="margin-bottom:6px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">حد أدنى موارد C (المجموع)</label><div style="display:flex;gap:4px;"><input id="alg-f-minwood" type="number" min="0" value="' + minResWood + '" placeholder="خشب" style="' + inputStyle + 'width:33%;"><input id="alg-f-minstone" type="number" min="0" value="' + minResStone + '" placeholder="طمي" style="' + inputStyle + 'width:33%;"><input id="alg-f-miniron" type="number" min="0" value="' + minResIron + '" placeholder="حديد" style="' + inputStyle + 'width:33%;"></div></div>' +
+                '<div style="margin-bottom:6px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">حد أدنى موارد C</label><div style="display:flex;gap:4px;"><input id="alg-f-minwood" type="number" min="0" value="' + minResWood + '" placeholder="خشب" style="' + inputStyle + 'width:33%;"><input id="alg-f-minstone" type="number" min="0" value="' + minResStone + '" placeholder="طمي" style="' + inputStyle + 'width:33%;"><input id="alg-f-miniron" type="number" min="0" value="' + minResIron + '" placeholder="حديد" style="' + inputStyle + 'width:33%;"></div></div>' +
                 row('أقصى مسافة (0=بلا حد)', '<input id="alg-f-maxdist" type="number" min="0" value="' + maxDistance + '" style="' + inputStyle + 'width:100%;">') +
                 '<div style="border-top:1px solid #c1a264;margin:8px 0 6px;padding-top:6px;">' +
                     '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:bold;color:#5c2d0a;">' +
@@ -173,7 +161,7 @@
                     '<span id="alg-f-counters" style="font-size:11px;color:#542e0a;">A: ' + sessionAttackA + ' | B: ' + sessionAttackB + ' | C: ' + sessionAttackC + '</span>' +
                     '<button id="alg-f-resetcnt" style="background:none;border:none;color:#c0392b;cursor:pointer;font-size:11px;text-decoration:underline;padding:0;">تصفير</button>' +
                 '</div>' +
-                '<div style="text-align:center;margin-top:8px;font-size:10px;color:#7a5c2a;border-top:1px solid #c1a264;padding-top:6px;">AlGzawy • الإصدار 3.0 ذكي</div>' +
+                '<div style="text-align:center;margin-top:8px;font-size:10px;color:#7a5c2a;border-top:1px solid #c1a264;padding-top:6px;">AlGzawy • الإصدار 3.1 ذكي</div>' +
             '</div>';
 
         document.body.appendChild(panel);
@@ -250,14 +238,12 @@
         if (btn) { btn.textContent = 'إيقاف'; btn.style.background = '#c0392b'; }
         sessionStorage.setItem(PAGE_IDX_KEY, '0');
 
-        // ===================== FIX #4: مسح بيانات localStorage عند بدء جلسة جديدة =====================
-        var toRemoveLS = [];
-        for (var i = 0; i < localStorage.length; i++) {
-            var k = localStorage.key(i);
-            if (k && (k.indexOf(LAST_ATTACK_PREFIX) === 0 || k.indexOf(ATTACK_COUNT_PREFIX) === 0)) toRemoveLS.push(k);
+        var toRemove = [];
+        for (var i = 0; i < sessionStorage.length; i++) {
+            var k = sessionStorage.key(i);
+            if (k && (k.indexOf(LAST_ATTACK_PREFIX) === 0 || k.indexOf(ATTACK_COUNT_PREFIX) === 0)) toRemove.push(k);
         }
-        toRemoveLS.forEach(function (k) { lsRemove(k); });
-
+        toRemove.forEach(function (k) { sessionStorage.removeItem(k); });
         sessionAttackA = 0; sessionAttackB = 0; sessionAttackC = 0;
         sessionStorage.removeItem('alg_farm_session_A');
         sessionStorage.removeItem('alg_farm_session_B');
@@ -371,7 +357,6 @@
         return { wood: nums[0], stone: nums[1], iron: nums[2] };
     }
 
-    // المنطق المطلوب: مجموع الموارد الكلي >= مجموع الحد الأدنى المطلوب
     function checkMinResForC(tr) {
         var minWood = getS('minResWood', 0);
         var minStone = getS('minResStone', 0);
@@ -379,7 +364,6 @@
         if (!minWood && !minStone && !minIron) return true;
         var res = parseResources(tr);
         if (!res) return true;
-        // مقارنة المجموع الكلي للموارد الفعلية بالمجموع الكلي للحد الأدنى المطلوب
         return (res.wood + res.stone + res.iron) >= (minWood + minStone + minIron);
     }
 
@@ -394,20 +378,18 @@
         return m ? m[1] : null;
     }
 
-    // ===================== FIX #4: استخدام localStorage لبيانات إعادة النهب =====================
     function shouldSkipRefarm(villageId) {
         var refarmDelay = getS('refarmDelay', 7200000);
         if (!refarmDelay || refarmDelay <= 0) return false;
-        var lastAttack = parseInt(lsGet(LAST_ATTACK_PREFIX + villageId) || '0');
+        var lastAttack = parseInt(sessionStorage.getItem(LAST_ATTACK_PREFIX + villageId) || '0');
         return (Date.now() - lastAttack) < refarmDelay;
     }
 
     function markAttacked(villageId, tpl) {
         if (villageId) {
-            // FIX #4: حفظ وقت الهجوم وعدده في localStorage بدلاً من sessionStorage
-            lsSet(LAST_ATTACK_PREFIX + villageId, Date.now().toString());
-            var cnt = parseInt(lsGet(ATTACK_COUNT_PREFIX + villageId) || '0') + 1;
-            lsSet(ATTACK_COUNT_PREFIX + villageId, cnt);
+            sessionStorage.setItem(LAST_ATTACK_PREFIX + villageId, Date.now().toString());
+            var cnt = parseInt(sessionStorage.getItem(ATTACK_COUNT_PREFIX + villageId) || '0') + 1;
+            sessionStorage.setItem(ATTACK_COUNT_PREFIX + villageId, cnt);
         }
         if (tpl === 'a') { sessionAttackA++; sessionStorage.setItem('alg_farm_session_A', sessionAttackA); }
         else if (tpl === 'b') { sessionAttackB++; sessionStorage.setItem('alg_farm_session_B', sessionAttackB); }
@@ -420,12 +402,11 @@
         if (el) el.textContent = 'A: ' + sessionAttackA + ' | B: ' + sessionAttackB + ' | C: ' + sessionAttackC;
     }
 
-    // ===================== FIX #4: استخدام localStorage لعدد الهجمات =====================
     function shouldSkipMaxAttacks(villageId) {
         if (!getS('maxAttacksEnabled', false)) return false;
         var maxA = getS('maxAttacksPerVillage', 10);
         if (maxA <= 0) return false;
-        return parseInt(lsGet(ATTACK_COUNT_PREFIX + villageId) || '0') >= maxA;
+        return parseInt(sessionStorage.getItem(ATTACK_COUNT_PREFIX + villageId) || '0') >= maxA;
     }
 
     function getAttackerCoords() {
@@ -450,54 +431,29 @@
         return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
     }
 
-    // ===================== FIX #1 & #2: إصلاح منطق اختيار القالب =====================
     function chooseTemplate(tr, defaultTpl) {
         var d = defaultTpl.toLowerCase();
-        var wallLevel = parseWallLevel(tr);
-
-        if (wallLevel === -1) return d;
-
-        var maxWallA = getS('maxWallForA', 5);
-        // FIX #1: تغيير maxWallB > 0 إلى maxWallB >= 0 للسماح باستهداف الحائط مستوى 0
-        var maxWallB = getS('maxWallForB', 0);
-
-        if (wallLevel <= maxWallA && tr.querySelector('.farm_icon_a:not([disabled]):not(.disabled)')) return 'a';
-        // FIX #1: الشرط الصحيح - maxWallB >= 0 يعني أن القيمة 0 تعطّل الفلتر (لا تستخدم B بناءً على الحائط)
-        // لكن إذا كان maxWallB > 0 فقط نطبق الفلتر، وهذا هو المنطق الأصلي المقصود
-        // الإصلاح الحقيقي: السماح لمستوى الحائط 0 بالمرور عند maxWallB = 0 إذا أراد المستخدم ذلك
-        if (maxWallB > 0 && wallLevel <= maxWallB && tr.querySelector('.farm_icon_b:not([disabled]):not(.disabled)')) return 'b';
-
-        if (tr.querySelector('.farm_icon_' + d + ':not([disabled]):not(.disabled)')) {
-            if (d === 'c' && !checkMinResForC(tr)) return null;
-            return d;
-        }
-        if (tr.querySelector('.farm_icon_a:not([disabled]):not(.disabled)')) return 'a';
-        if (tr.querySelector('.farm_icon_b:not([disabled]):not(.disabled)')) return 'b';
-        if (tr.querySelector('.farm_icon_c:not([disabled]):not(.disabled)')) {
-            if (!checkMinResForC(tr)) return null;
-            return 'c';
-        }
-        return null;
+        var btn = tr.querySelector('.farm_icon_' + d + ':not([disabled]):not(.disabled)');
+        if (!btn) return null;
+        if (d === 'c' && !checkMinResForC(tr)) return null;
+        return d;
     }
 
-    // ===================== FIX #2: إصلاح منطق chooseMergeTemplate =====================
     function chooseMergeTemplate(tr, useA, useB, useC) {
         var wallLevel = parseWallLevel(tr);
-        var maxWallA = getS('maxWallForA', 5);
+        var maxWallA = getS('maxWallForA', 0);
         var maxWallB = getS('maxWallForB', 0);
         var hasA = !!tr.querySelector('.farm_icon_a:not([disabled]):not(.disabled)');
         var hasB = !!tr.querySelector('.farm_icon_b:not([disabled]):not(.disabled)');
         var hasC = !!tr.querySelector('.farm_icon_c:not([disabled]):not(.disabled)');
 
-        // Wall-based rules
-        if (useA && wallLevel !== -1 && wallLevel <= maxWallA && hasA) return 'a';
+        // Wall-based rules (only when threshold > 0 and wall is known)
+        if (useA && maxWallA > 0 && wallLevel !== -1 && wallLevel <= maxWallA && hasA) return 'a';
         if (useB && maxWallB > 0 && wallLevel !== -1 && wallLevel <= maxWallB && hasB) return 'b';
 
-        // FIX #2: Fallback مُصلح - يحترم شرط الحائط ولا يتجاوزه
-        // إذا كان الحائط أعلى من maxWallA لا نرسل A في الـ Fallback
-        if (useA && hasA && (wallLevel === -1 || wallLevel <= maxWallA)) return 'a';
-        // إذا كان الحائط أعلى من maxWallB لا نرسل B في الـ Fallback (إلا إذا كان maxWallB = 0 أي معطّل)
-        if (useB && hasB && (wallLevel === -1 || maxWallB <= 0 || wallLevel <= maxWallB)) return 'b';
+        // Fallback: use first enabled+available template
+        if (useA && hasA) return 'a';
+        if (useB && hasB) return 'b';
         if (useC && hasC) {
             if (!checkMinResForC(tr)) return null;
             return 'c';
