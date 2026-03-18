@@ -201,38 +201,15 @@
         var villageId = getCurrentVillageId();
         setStatus('جاري الفحص...');
 
-        var overviewUrl = base + '?village=' + (villageId || '') + '&screen=overview&t=' + Date.now();
-        gmFetch(overviewUrl, function (html) {
+        var url = base + '?village=' + (villageId || '') + '&screen=overview_villages&mode=incomings&type=unignored&subtype=attacks&page=-1&t=' + Date.now();
+        gmFetch(url, function (html) {
             if (!isRunning) return;
-            var count = extractIncomingsCount(html);
-            console.log('[AlGzawy Attacks] incomings count from game_data:', count);
-            if (count === 0) {
-                setStatus('لا توجد هجمات');
-                saveKnownAttacks([]);
-                GM_setValue(PREFIX + 'lastIncomingsCount', 0);
-                updateLastCheck();
-                scheduleNext();
-                return;
-            }
-            fetchAttackDetails(base, villageId, count);
-        }, function (err) {
-            if (!isRunning) return;
-            setStatus('خطأ في الفحص: ' + err);
-            if (err.indexOf('جلسة') !== -1) stopBot();
-            else { updateLastCheck(); scheduleNext(); }
-        });
-    }
-
-    function fetchAttackDetails(base, villageId, incomingsCount) {
-        var detailUrl = base + '?village=' + (villageId || '') + '&screen=overview_villages&mode=incomings&type=unignored&subtype=attacks&page=-1&t=' + Date.now();
-        gmFetch(detailUrl, function (html) {
-            if (!isRunning) return;
-            parseAndAlert(html, incomingsCount);
+            parseAndAlert(html, -1);
             updateLastCheck();
             scheduleNext();
         }, function (err) {
             if (!isRunning) return;
-            setStatus('خطأ في جلب التفاصيل: ' + err);
+            setStatus('خطأ في الفحص: ' + err);
             if (err.indexOf('جلسة') !== -1) stopBot();
             else { updateLastCheck(); scheduleNext(); }
         });
@@ -270,50 +247,34 @@
         var rows = doc.querySelectorAll('#incomings_table tr.row_a, #incomings_table tr.row_b');
         var known = getKnownAttacks();
 
-        if (rows.length > 0) {
-            var newAttacks = [];
-            var allIds = [];
-
-            rows.forEach(function (row) {
-                var attackId = extractAttackId(row);
-                if (!attackId) return;
-                allIds.push(attackId);
-                if (known.indexOf(attackId) === -1) {
-                    newAttacks.push(row);
-                }
-            });
-
-            saveKnownAttacks(allIds);
-            GM_setValue(PREFIX + 'lastIncomingsCount', allIds.length);
-
-            if (newAttacks.length > 0) {
-                setStatus('هجمات جديدة: ' + newAttacks.length);
-                sendTelegramAlerts(newAttacks);
-                if (getS('alertSound', true)) playAlertSound();
-            } else {
-                setStatus('لا هجمات جديدة (' + rows.length + ' إجمالي)');
-            }
-        } else if (incomingsCount > 0) {
-            var lastCount = GM_getValue(PREFIX + 'lastIncomingsCount', 0);
-            GM_setValue(PREFIX + 'lastIncomingsCount', incomingsCount);
-
-            if (incomingsCount > lastCount) {
-                setStatus('هجمات جديدة: ' + incomingsCount);
-                if (getS('alertSound', true)) playAlertSound();
-                var base = getGameUrl();
-                var msg = 'تنبيه: ' + incomingsCount + ' هجمة جديدة على قريتك في Tribal Wars!\n';
-                msg += 'الوقت: ' + new Date().toLocaleString('ar') + '\n';
-                msg += 'رابط: ' + (base || '') + '?screen=overview&mode=incomings';
-                var token = getS('botToken', '');
-                var chatId = getS('chatId', '');
-                if (token && chatId) sendTelegram(token, chatId, msg);
-            } else {
-                setStatus('هجمات موجودة: ' + incomingsCount);
-            }
-        } else {
+        if (rows.length === 0) {
             setStatus('لا توجد هجمات');
             saveKnownAttacks([]);
             GM_setValue(PREFIX + 'lastIncomingsCount', 0);
+            return;
+        }
+
+        var newAttacks = [];
+        var allIds = [];
+
+        rows.forEach(function (row) {
+            var attackId = extractAttackId(row);
+            if (!attackId) return;
+            allIds.push(attackId);
+            if (known.indexOf(attackId) === -1) {
+                newAttacks.push(row);
+            }
+        });
+
+        saveKnownAttacks(allIds);
+        GM_setValue(PREFIX + 'lastIncomingsCount', allIds.length);
+
+        if (newAttacks.length > 0) {
+            setStatus('هجمات جديدة: ' + newAttacks.length);
+            sendTelegramAlerts(newAttacks);
+            if (getS('alertSound', true)) playAlertSound();
+        } else {
+            setStatus('لا هجمات جديدة (' + rows.length + ' إجمالي)');
         }
     }
 
