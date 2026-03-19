@@ -263,9 +263,17 @@
         var chatId = getS('chatId', '');
         if (!token || !chatId) return;
         var base = getGameUrl();
-        var msg = 'تنبيه: ' + count + ' هجمة واردة على قراك في Tribal Wars!\n';
-        msg += 'الوقت: ' + new Date().toLocaleString('ar') + '\n';
-        msg += 'رابط: ' + (base || '') + '?screen=overview_villages&mode=incomings&subtype=attacks';
+        var link = base ? base + '?screen=overview_villages&mode=incomings&subtype=attacks' : '';
+
+        var msg = '';
+        msg += '⚔️ هجوم وارد على Tribal Wars!\n';
+        msg += '━━━━━━━━━━━━━━━━━━\n';
+        msg += '🌍 العالم: ' + getWorldName() + '\n';
+        msg += '⚠️ عدد الهجمات: ' + count + '\n';
+        msg += '📅 الوقت: ' + new Date().toLocaleString('ar') + '\n';
+        msg += '━━━━━━━━━━━━━━━━━━\n';
+        if (link) msg += '🔗 ' + link + '\n';
+        msg += '\n🚀 AlGzawy Edition';
         sendTelegram(token, chatId, msg);
     }
 
@@ -356,34 +364,39 @@
         GM_setValue(PREFIX + 'knownAttacks', ids.join(','));
     }
 
+    function getWorldName() {
+        var m = location.hostname.match(/^([^.]+)\./);
+        return m ? m[1] : location.hostname;
+    }
+
     function buildAttackMessage(row) {
-        var msg = 'تنبيه هجوم على Tribal Wars!\n\n';
-
         var cells = row.querySelectorAll('td');
-        // td[0]=أمر, td[1]=الهدف, td[2]=البداية, td[3]=اللاعب, td[4]=المسافة, td[5]=توقيت الوصول, td[6]=يصل في
-        var targetCell  = cells[1] ? cells[1].textContent.trim() : '';
-        var originCell  = cells[2] ? cells[2].textContent.trim() : '';
-        var playerCell  = cells[3] ? cells[3].textContent.trim() : '';
-        var distCell    = cells[4] ? cells[4].textContent.trim() : '';
-        var arrivalCell = cells[5] ? cells[5].textContent.trim() : '';
-        var inCell      = cells[6] ? cells[6].textContent.trim() : '';
+        var targetCell  = cells[1] ? cells[1].textContent.trim() : '—';
+        var originCell  = cells[2] ? cells[2].textContent.trim() : '—';
+        var playerCell  = cells[3] ? cells[3].textContent.trim() : '—';
+        var distCell    = cells[4] ? cells[4].textContent.trim() : '—';
+        var arrivalCell = cells[5] ? cells[5].textContent.trim() : '—';
+        var inCell      = cells[6] ? cells[6].textContent.trim() : '—';
 
-        if (getS('showVillage', true) && targetCell) {
-            msg += 'القرية المستهدفة: ' + targetCell + '\n';
-        }
-        if (originCell) msg += 'من قرية: ' + originCell + '\n';
-        if (playerCell) msg += 'اللاعب: ' + playerCell + '\n';
-        if (distCell)   msg += 'المسافة: ' + distCell + '\n';
-        if (arrivalCell) msg += 'وقت الوصول: ' + arrivalCell + '\n';
-        if (inCell)     msg += 'يصل في: ' + inCell + '\n';
+        var base = getGameUrl();
+        var link = base ? base + '?screen=overview_villages&mode=incomings&subtype=attacks' : '';
 
-        var attackId = extractAttackId(row);
-        if (attackId) {
-            var base = getGameUrl();
-            if (base) {
-                msg += '\nرابط: ' + base + '?screen=overview&mode=incomings';
-            }
+        var msg = '';
+        msg += '⚔️ هجوم وارد على Tribal Wars!\n';
+        msg += '━━━━━━━━━━━━━━━━━━\n';
+        msg += '🌍 العالم: ' + getWorldName() + '\n';
+        msg += '👤 المهاجم: ' + playerCell + '\n';
+        msg += '🏰 من قرية: ' + originCell + '\n';
+        if (getS('showVillage', true)) {
+            msg += '🎯 الهدف: ' + targetCell + '\n';
         }
+        msg += '━━━━━━━━━━━━━━━━━━\n';
+        msg += '📏 المسافة: ' + distCell + '\n';
+        msg += '🕐 يصل في: ' + inCell + '\n';
+        msg += '📅 توقيت الوصول: ' + arrivalCell + '\n';
+        msg += '━━━━━━━━━━━━━━━━━━\n';
+        if (link) msg += '🔗 ' + link + '\n';
+        msg += '\n🚀 AlGzawy Edition';
 
         return msg;
     }
@@ -391,25 +404,16 @@
     function sendTelegramAlerts(attacks) {
         var token = getS('botToken', '');
         var chatId = getS('chatId', '');
-
         if (!token || !chatId) {
             setStatus('خطأ: Bot Token أو Chat ID غير محدد');
             return;
         }
 
-        var summary = 'تنبيه: ' + attacks.length + ' هجمة جديدة على قريتك في Tribal Wars!\n';
-        summary += 'الوقت: ' + new Date().toLocaleString('ar') + '\n';
-        summary += 'رابط اللعبة: ' + (getGameUrl() || '') + '?screen=overview&mode=incomings';
-
-        sendTelegram(token, chatId, summary);
-
-        if (attacks.length <= 5) {
-            attacks.forEach(function (row, i) {
-                setTimeout(function () {
-                    sendTelegram(token, chatId, buildAttackMessage(row));
-                }, (i + 1) * 1000);
-            });
-        }
+        attacks.forEach(function (row, i) {
+            setTimeout(function () {
+                sendTelegram(token, chatId, buildAttackMessage(row));
+            }, i * 1200);
+        });
     }
 
     function sendTelegram(token, chatId, text) {
