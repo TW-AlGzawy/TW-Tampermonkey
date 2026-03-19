@@ -196,6 +196,10 @@
         if (isNaN(count)) count = 0;
 
         var lastCount = GM_getValue(PREFIX + 'lastIncomingsCount', 0);
+        var lastAlertTime = GM_getValue(PREFIX + 'lastAlertTime', 0);
+        var now = Date.now();
+        var reminderInterval = getS('interval', 30) * 1000 * 2;
+
         console.log('[AlGzawy Attacks] incomings_amount:', count, '| last:', lastCount);
 
         if (count === 0) {
@@ -204,17 +208,24 @@
             updateLastCheck(); scheduleNext(); return;
         }
 
-        if (count > lastCount) {
-            setStatus('هجمات جديدة: ' + count);
-            GM_setValue(PREFIX + 'lastIncomingsCount', count);
+        var isNewAttack = count > lastCount;
+        var isReminder  = count > 0 && (now - lastAlertTime) >= reminderInterval;
+
+        if (isNewAttack || isReminder) {
+            if (isNewAttack) {
+                setStatus('هجمات جديدة: ' + count);
+                GM_setValue(PREFIX + 'lastIncomingsCount', count);
+            } else {
+                setStatus('تذكير: ' + count + ' هجمات');
+            }
+            GM_setValue(PREFIX + 'lastAlertTime', now);
             if (getS('alertSound', true)) playAlertSound();
 
             var pageRows = document.querySelectorAll('#incomings_table tr.row_a, #incomings_table tr.row_b');
             if (pageRows.length > 0) {
-                console.log('[AlGzawy] reading from current page, rows:', pageRows.length);
-                processAttackRows(pageRows);
+                processAttackRows(pageRows, isNewAttack);
             } else {
-                fetchAttackDetails(count);
+                fetchAttackDetails(count, isNewAttack);
             }
         } else {
             setStatus('هجمات موجودة: ' + count);
@@ -223,7 +234,7 @@
         updateLastCheck(); scheduleNext();
     }
 
-    function processAttackRows(rows) {
+    function processAttackRows(rows, isNewAttack) {
         var known = getKnownAttacks();
         var newAttacks = [];
         var allIds = [];
@@ -234,11 +245,11 @@
             if (known.indexOf(id) === -1) newAttacks.push(row);
         });
         if (allIds.length > 0) saveKnownAttacks(allIds);
-        if (newAttacks.length > 0) sendTelegramAlerts(newAttacks);
-        else sendTelegramAlerts(Array.from(rows));
+        var toSend = newAttacks.length > 0 ? newAttacks : Array.from(rows);
+        sendTelegramAlerts(toSend);
     }
 
-    function fetchAttackDetails(incomingsCount) {
+    function fetchAttackDetails(incomingsCount, isNewAttack) {
         var base = getGameUrl();
         var villageId = getCurrentVillageId();
         if (!base) { sendTelegramCountAlert(incomingsCount); return; }
@@ -259,7 +270,7 @@
                     var doc = parser.parseFromString(xhr.responseText, 'text/html');
                     var rows = doc.querySelectorAll('#incomings_table tr.row_a, #incomings_table tr.row_b');
                     console.log('[AlGzawy] XHR rows:', rows.length, 'html:', xhr.responseText.length);
-                    if (rows.length > 0) processAttackRows(rows);
+                    if (rows.length > 0) processAttackRows(rows, isNewAttack);
                     else sendTelegramCountAlert(incomingsCount);
                 } else {
                     sendTelegramCountAlert(incomingsCount);
@@ -515,21 +526,26 @@
     function playAlertSound() {
         try {
             var ctx = new (window.AudioContext || window.webkitAudioContext)();
-            function beep(freq, start, dur) {
+            function beep(freq, start, dur, vol) {
                 var o = ctx.createOscillator();
                 var g = ctx.createGain();
                 o.connect(g);
                 g.connect(ctx.destination);
                 o.frequency.value = freq;
-                o.type = 'square';
-                g.gain.setValueAtTime(0.3, ctx.currentTime + start);
+                o.type = 'sawtooth';
+                g.gain.setValueAtTime(vol || 1.0, ctx.currentTime + start);
                 g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur);
                 o.start(ctx.currentTime + start);
                 o.stop(ctx.currentTime + start + dur);
             }
-            beep(880, 0, 0.15);
-            beep(660, 0.2, 0.15);
-            beep(880, 0.4, 0.2);
+            var pattern = [
+                [900, 0.00, 0.12], [900, 0.14, 0.12], [900, 0.28, 0.12],
+                [700, 0.45, 0.20],
+                [900, 0.70, 0.12], [900, 0.84, 0.12], [900, 0.98, 0.12],
+                [700, 1.15, 0.20],
+                [1100,1.40, 0.30],
+            ];
+            pattern.forEach(function(b) { beep(b[0], b[1], b[2]); });
         } catch (e) {}
     }
 
