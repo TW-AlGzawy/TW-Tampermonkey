@@ -287,7 +287,6 @@
         msg += '━━━━━━━━━━━━━━━━━━\n';
         msg += '⚠️ <b>عدد الهجمات:</b> ' + count + '\n';
         msg += '📅 <b>الوقت:</b> ' + new Date().toLocaleString('ar') + '\n';
-        if (link) msg += '\n🔗 ' + link + '\n';
         msg += '\n🚀 <b>AlGzawy Edition</b>';
         sendTelegram(token, chatId, msg);
     }
@@ -419,7 +418,6 @@
         msg += '📏 <b>المسافة:</b> ' + distCell + '\n';
         msg += '⏳ <b>يصل في:</b> ' + inCell + '\n';
         msg += '📅 <b>توقيت الوصول:</b> ' + arrivalCell + '\n';
-        if (link) msg += '\n🔗 ' + link + '\n';
         msg += '\n🚀 <b>AlGzawy Edition</b>';
 
         return msg;
