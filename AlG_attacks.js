@@ -204,6 +204,15 @@
         var url = base + '?village=' + (villageId || '') + '&screen=overview_villages&type=unignored&subtype=attacks&page=-1&t=' + Date.now();
         gmFetch(url, function (html) {
             if (!isRunning) return;
+            var parser = new DOMParser();
+            var doc = parser.parseFromString(html, 'text/html');
+            var rows = doc.querySelectorAll('#incomings_table tr.row_a, #incomings_table tr.row_b');
+            var hasTable = !!doc.querySelector('#incomings_table');
+            console.log('[AlGzawy DEBUG] URL:', url);
+            console.log('[AlGzawy DEBUG] HTML length:', html.length);
+            console.log('[AlGzawy DEBUG] #incomings_table found:', hasTable);
+            console.log('[AlGzawy DEBUG] rows found:', rows.length);
+            console.log('[AlGzawy DEBUG] HTML snippet:', html.substring(0, 500));
             parseAndAlert(html, -1);
             updateLastCheck();
             scheduleNext();
