@@ -226,36 +226,59 @@
     function fetchAttackDetails(incomingsCount) {
         var base = getGameUrl();
         var villageId = getCurrentVillageId();
-        if (!base) return;
+        if (!base) { sendTelegramCountAlert(incomingsCount); return; }
 
         var url = base + '?village=' + (villageId || '') + '&screen=overview_villages&type=unignored&subtype=attacks&page=-1&t=' + Date.now();
-        gmFetch(url, function (html) {
-            var parser = new DOMParser();
-            var doc = parser.parseFromString(html, 'text/html');
-            var rows = doc.querySelectorAll('#incomings_table tr.row_a, #incomings_table tr.row_b');
-            var known = getKnownAttacks();
 
-            if (rows.length > 0) {
+        var iframe = document.createElement('iframe');
+        iframe.style.cssText = 'display:none;width:0;height:0;border:0;position:absolute;left:-9999px;';
+        iframe.src = url;
+
+        var done = false;
+        var timer = setTimeout(function () {
+            if (done) return;
+            done = true;
+            if (iframe.parentNode) document.body.removeChild(iframe);
+            sendTelegramCountAlert(incomingsCount);
+        }, 12000);
+
+        iframe.onload = function () {
+            if (done) return;
+            done = true;
+            clearTimeout(timer);
+
+            try {
+                var doc = iframe.contentDocument || iframe.contentWindow.document;
+                var rows = doc.querySelectorAll('#incomings_table tr.row_a, #incomings_table tr.row_b');
+                var known = getKnownAttacks();
                 var newAttacks = [];
                 var allIds = [];
+
                 rows.forEach(function (row) {
                     var id = extractAttackId(row);
                     if (!id) return;
                     allIds.push(id);
                     if (known.indexOf(id) === -1) newAttacks.push(row);
                 });
-                saveKnownAttacks(allIds);
+
+                if (allIds.length > 0) saveKnownAttacks(allIds);
+
                 if (newAttacks.length > 0) {
                     sendTelegramAlerts(newAttacks);
+                } else if (rows.length > 0) {
+                    sendTelegramAlerts(Array.from(rows).slice(0, incomingsCount));
                 } else {
                     sendTelegramCountAlert(incomingsCount);
                 }
-            } else {
+            } catch (e) {
+                console.warn('[AlGzawy Attacks] iframe parse error:', e);
                 sendTelegramCountAlert(incomingsCount);
             }
-        }, function () {
-            sendTelegramCountAlert(incomingsCount);
-        });
+
+            if (iframe.parentNode) document.body.removeChild(iframe);
+        };
+
+        document.body.appendChild(iframe);
     }
 
     function sendTelegramCountAlert(count) {
