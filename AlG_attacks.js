@@ -230,26 +230,23 @@
 
         var url = base + '?village=' + (villageId || '') + '&screen=overview_villages&type=unignored&subtype=attacks&page=-1&t=' + Date.now();
 
-        var iframe = document.createElement('iframe');
-        iframe.style.cssText = 'display:none;width:0;height:0;border:0;position:absolute;left:-9999px;';
-        iframe.src = url;
+        var pageFetch = (typeof unsafeWindow !== 'undefined' && unsafeWindow.fetch)
+            ? unsafeWindow.fetch.bind(unsafeWindow)
+            : window.fetch.bind(window);
 
-        var done = false;
-        var timer = setTimeout(function () {
-            if (done) return;
-            done = true;
-            if (iframe.parentNode) document.body.removeChild(iframe);
-            sendTelegramCountAlert(incomingsCount);
-        }, 12000);
-
-        iframe.onload = function () {
-            if (done) return;
-            done = true;
-            clearTimeout(timer);
-
-            try {
-                var doc = iframe.contentDocument || iframe.contentWindow.document;
+        pageFetch(url, { credentials: 'include' })
+            .then(function (resp) {
+                if (resp.url && resp.url.indexOf('session-expired') !== -1) throw new Error('session');
+                if (!resp.ok) throw new Error('http-' + resp.status);
+                return resp.text();
+            })
+            .then(function (html) {
+                console.log('[AlGzawy] detail html length:', html.length);
+                var parser = new DOMParser();
+                var doc = parser.parseFromString(html, 'text/html');
                 var rows = doc.querySelectorAll('#incomings_table tr.row_a, #incomings_table tr.row_b');
+                console.log('[AlGzawy] detail rows found:', rows.length);
+
                 var known = getKnownAttacks();
                 var newAttacks = [];
                 var allIds = [];
@@ -266,19 +263,15 @@
                 if (newAttacks.length > 0) {
                     sendTelegramAlerts(newAttacks);
                 } else if (rows.length > 0) {
-                    sendTelegramAlerts(Array.from(rows).slice(0, incomingsCount));
+                    sendTelegramAlerts(Array.from(rows));
                 } else {
                     sendTelegramCountAlert(incomingsCount);
                 }
-            } catch (e) {
-                console.warn('[AlGzawy Attacks] iframe parse error:', e);
+            })
+            .catch(function (err) {
+                console.warn('[AlGzawy] fetchAttackDetails failed:', err.message);
                 sendTelegramCountAlert(incomingsCount);
-            }
-
-            if (iframe.parentNode) document.body.removeChild(iframe);
-        };
-
-        document.body.appendChild(iframe);
+            });
     }
 
     function sendTelegramCountAlert(count) {
