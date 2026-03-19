@@ -3,6 +3,9 @@
 
     var S = unsafeWindow.ALGZAWY_ATK_SETTINGS;
     var PREFIX = 'algzawy_attacks_';
+    var alarmCtx = null;
+    var alarmOsc = null;
+    var alarmOverlay = null;
 
     var checkTimer = null;
     var statusEl = null;
@@ -530,29 +533,101 @@
     }
 
     function playAlertSound() {
+        stopAlertSound();
         try {
-            var ctx = new (window.AudioContext || window.webkitAudioContext)();
-            function beep(freq, start, dur, vol) {
-                var o = ctx.createOscillator();
-                var g = ctx.createGain();
-                o.connect(g);
-                g.connect(ctx.destination);
-                o.frequency.value = freq;
-                o.type = 'sawtooth';
-                g.gain.setValueAtTime(vol || 1.0, ctx.currentTime + start);
-                g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur);
-                o.start(ctx.currentTime + start);
-                o.stop(ctx.currentTime + start + dur);
+            alarmCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+            var gain = alarmCtx.createGain();
+            gain.gain.value = 1.5;
+            gain.connect(alarmCtx.destination);
+
+            var osc1 = alarmCtx.createOscillator();
+            var osc2 = alarmCtx.createOscillator();
+            osc1.type = 'sawtooth';
+            osc2.type = 'square';
+            osc1.connect(gain);
+            osc2.connect(gain);
+
+            var t = alarmCtx.currentTime;
+            for (var i = 0; i < 9999; i++) {
+                var base = t + i * 0.9;
+                osc1.frequency.setValueAtTime(660, base);
+                osc1.frequency.linearRampToValueAtTime(1100, base + 0.45);
+                osc1.frequency.linearRampToValueAtTime(660, base + 0.9);
+                osc2.frequency.setValueAtTime(330, base);
+                osc2.frequency.linearRampToValueAtTime(550, base + 0.45);
+                osc2.frequency.linearRampToValueAtTime(330, base + 0.9);
             }
-            var pattern = [
-                [900, 0.00, 0.12], [900, 0.14, 0.12], [900, 0.28, 0.12],
-                [700, 0.45, 0.20],
-                [900, 0.70, 0.12], [900, 0.84, 0.12], [900, 0.98, 0.12],
-                [700, 1.15, 0.20],
-                [1100,1.40, 0.30],
-            ];
-            pattern.forEach(function(b) { beep(b[0], b[1], b[2]); });
-        } catch (e) {}
+
+            osc1.start();
+            osc2.start();
+            alarmOsc = [osc1, osc2];
+        } catch (e) {
+            console.warn('[AlGzawy] AudioContext error:', e);
+        }
+        showAlarmOverlay();
+    }
+
+    function stopAlertSound() {
+        if (alarmOsc) {
+            alarmOsc.forEach(function (o) { try { o.stop(); } catch (e) {} });
+            alarmOsc = null;
+        }
+        if (alarmCtx) {
+            try { alarmCtx.close(); } catch (e) {}
+            alarmCtx = null;
+        }
+        hideAlarmOverlay();
+    }
+
+    function showAlarmOverlay() {
+        hideAlarmOverlay();
+        var div = document.createElement('div');
+        div.id = 'alg-alarm-overlay';
+        div.style.cssText = [
+            'position:fixed', 'top:0', 'left:0', 'width:100%', 'height:100%',
+            'z-index:2147483647', 'display:flex', 'align-items:center', 'justify-content:center',
+            'background:rgba(180,0,0,0.55)', 'animation:alg-flash 0.6s infinite alternate',
+            'pointer-events:all'
+        ].join(';');
+
+        var style = document.createElement('style');
+        style.textContent = '@keyframes alg-flash{from{background:rgba(180,0,0,0.55)}to{background:rgba(255,50,0,0.80)}}';
+        document.head.appendChild(style);
+
+        var box = document.createElement('div');
+        box.style.cssText = [
+            'background:#1a0000', 'border:4px solid #ff2200', 'border-radius:16px',
+            'padding:40px 60px', 'text-align:center', 'box-shadow:0 0 60px #ff0000',
+            'font-family:Arial,sans-serif'
+        ].join(';');
+
+        box.innerHTML = [
+            '<div style="font-size:64px;margin-bottom:10px;">🚨</div>',
+            '<div style="color:#ff4444;font-size:28px;font-weight:bold;margin-bottom:8px;">تنبيه هجوم!</div>',
+            '<div style="color:#ffcccc;font-size:16px;margin-bottom:30px;">يوجد هجوم وارد على حسابك</div>',
+            '<button id="alg-stop-alarm" style="',
+                'background:#cc0000;color:#fff;border:none;border-radius:10px;',
+                'padding:16px 48px;font-size:22px;font-weight:bold;cursor:pointer;',
+                'box-shadow:0 4px 20px rgba(255,0,0,0.6);',
+                'font-family:Arial,sans-serif;',
+            '">⛔ إيقاف الصوت</button>'
+        ].join('');
+
+        div.appendChild(box);
+        document.body.appendChild(div);
+        alarmOverlay = div;
+
+        document.getElementById('alg-stop-alarm').onclick = function () { stopAlertSound(); };
+    }
+
+    function hideAlarmOverlay() {
+        if (alarmOverlay && alarmOverlay.parentNode) {
+            alarmOverlay.parentNode.removeChild(alarmOverlay);
+        }
+        alarmOverlay = null;
+        var existing = document.getElementById('alg-alarm-overlay');
+        if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
     }
 
     buildPanel();
