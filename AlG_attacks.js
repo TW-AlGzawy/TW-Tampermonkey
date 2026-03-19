@@ -201,7 +201,7 @@
         var villageId = getCurrentVillageId();
         setStatus('جاري الفحص...');
 
-        var url = base + '?village=' + (villageId || '') + '&screen=overview_villages&mode=incomings&type=unignored&subtype=attacks&page=-1&t=' + Date.now();
+        var url = base + '?village=' + (villageId || '') + '&screen=overview_villages&type=unignored&subtype=attacks&page=-1&t=' + Date.now();
         gmFetch(url, function (html) {
             if (!isRunning) return;
             parseAndAlert(html, -1);
