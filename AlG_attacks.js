@@ -59,6 +59,7 @@
         var botToken = getS('botToken', DEFAULT_TOKEN);
         var chatId = getS('chatId', DEFAULT_CHAT_ID);
         var interval = getS('checkInterval', 60);
+        var reminderMins = getS('reminderMins', 60);
         var alertSound = getS('alertSound', true);
         var showVillage = getS('showVillage', true);
 
@@ -90,6 +91,7 @@
                 row('Telegram Bot Token', '<input id="alg-atk-token" type="text" value="' + botToken + '" placeholder="123456:ABC-..." style="' + inputStyle + 'width:100%;">') +
                 row('Chat ID / Channel ID', '<input id="alg-atk-chatid" type="text" value="' + chatId + '" placeholder="-100123456789" style="' + inputStyle + 'width:100%;">') +
                 row('فترة الفحص (ثانية)', '<input id="alg-atk-interval" type="number" min="10" value="' + interval + '" style="' + inputStyle + 'width:100%;">') +
+                row('تذكير إذا بقيت الهجمة (دقيقة)', '<input id="alg-atk-reminder" type="number" min="1" value="' + reminderMins + '" style="' + inputStyle + 'width:100%;">') +
                 '<div style="margin-bottom:6px;"><label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="alg-atk-sound" ' + (alertSound ? 'checked' : '') + ' style="width:16px;height:16px;cursor:pointer;"><span style="font-weight:bold;">صوت تنبيه</span></label></div>' +
                 '<div style="margin-bottom:6px;"><label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="alg-atk-village" ' + (showVillage ? 'checked' : '') + ' style="width:16px;height:16px;cursor:pointer;"><span style="font-weight:bold;">أرسل تفاصيل القرية</span></label></div>' +
                 '<button id="alg-atk-test" style="' + btnStyle + 'background:#2980b9;margin-bottom:6px;">اختبار التليجرام</button>' +
@@ -126,6 +128,7 @@
         saveS('botToken', document.getElementById('alg-atk-token').value.trim());
         saveS('chatId', document.getElementById('alg-atk-chatid').value.trim());
         saveS('checkInterval', parseInt(document.getElementById('alg-atk-interval').value) || 60);
+        saveS('reminderMins', parseInt(document.getElementById('alg-atk-reminder').value) || 60);
         saveS('alertSound', document.getElementById('alg-atk-sound').checked);
         saveS('showVillage', document.getElementById('alg-atk-village').checked);
         setStatus('تم الحفظ ✓');
@@ -201,7 +204,7 @@
         var lastCount = GM_getValue(PREFIX + 'lastIncomingsCount', 0);
         var lastAlertTime = GM_getValue(PREFIX + 'lastAlertTime', 0);
         var now = Date.now();
-        var reminderInterval = getS('interval', 30) * 1000 * 2;
+        var reminderInterval = getS('reminderMins', 60) * 60 * 1000;
 
         console.log('[AlGzawy Attacks] incomings_amount:', count, '| last:', lastCount);
 
