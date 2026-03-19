@@ -196,31 +196,46 @@
         if (isNaN(count)) count = 0;
 
         var lastCount = GM_getValue(PREFIX + 'lastIncomingsCount', 0);
-
         console.log('[AlGzawy Attacks] incomings_amount:', count, '| last:', lastCount);
 
         if (count === 0) {
             setStatus('لا توجد هجمات');
-            if (lastCount !== 0) {
-                saveKnownAttacks([]);
-                GM_setValue(PREFIX + 'lastIncomingsCount', 0);
-            }
-            updateLastCheck();
-            scheduleNext();
-            return;
+            if (lastCount !== 0) { saveKnownAttacks([]); GM_setValue(PREFIX + 'lastIncomingsCount', 0); }
+            updateLastCheck(); scheduleNext(); return;
         }
 
         if (count > lastCount) {
             setStatus('هجمات جديدة: ' + count);
             GM_setValue(PREFIX + 'lastIncomingsCount', count);
             if (getS('alertSound', true)) playAlertSound();
-            fetchAttackDetails(count);
+
+            var pageRows = document.querySelectorAll('#incomings_table tr.row_a, #incomings_table tr.row_b');
+            if (pageRows.length > 0) {
+                console.log('[AlGzawy] reading from current page, rows:', pageRows.length);
+                processAttackRows(pageRows);
+            } else {
+                fetchAttackDetails(count);
+            }
         } else {
             setStatus('هجمات موجودة: ' + count);
         }
 
-        updateLastCheck();
-        scheduleNext();
+        updateLastCheck(); scheduleNext();
+    }
+
+    function processAttackRows(rows) {
+        var known = getKnownAttacks();
+        var newAttacks = [];
+        var allIds = [];
+        rows.forEach(function (row) {
+            var id = extractAttackId(row);
+            if (!id) return;
+            allIds.push(id);
+            if (known.indexOf(id) === -1) newAttacks.push(row);
+        });
+        if (allIds.length > 0) saveKnownAttacks(allIds);
+        if (newAttacks.length > 0) sendTelegramAlerts(newAttacks);
+        else sendTelegramAlerts(Array.from(rows));
     }
 
     function fetchAttackDetails(incomingsCount) {
@@ -230,48 +245,32 @@
 
         var url = base + '?village=' + (villageId || '') + '&screen=overview_villages&type=unignored&subtype=attacks&page=-1&t=' + Date.now();
 
-        var pageFetch = (typeof unsafeWindow !== 'undefined' && unsafeWindow.fetch)
-            ? unsafeWindow.fetch.bind(unsafeWindow)
-            : window.fetch.bind(window);
-
-        pageFetch(url, { credentials: 'include' })
-            .then(function (resp) {
-                if (resp.url && resp.url.indexOf('session-expired') !== -1) throw new Error('session');
-                if (!resp.ok) throw new Error('http-' + resp.status);
-                return resp.text();
-            })
-            .then(function (html) {
-                console.log('[AlGzawy] detail html length:', html.length);
-                var parser = new DOMParser();
-                var doc = parser.parseFromString(html, 'text/html');
-                var rows = doc.querySelectorAll('#incomings_table tr.row_a, #incomings_table tr.row_b');
-                console.log('[AlGzawy] detail rows found:', rows.length);
-
-                var known = getKnownAttacks();
-                var newAttacks = [];
-                var allIds = [];
-
-                rows.forEach(function (row) {
-                    var id = extractAttackId(row);
-                    if (!id) return;
-                    allIds.push(id);
-                    if (known.indexOf(id) === -1) newAttacks.push(row);
-                });
-
-                if (allIds.length > 0) saveKnownAttacks(allIds);
-
-                if (newAttacks.length > 0) {
-                    sendTelegramAlerts(newAttacks);
-                } else if (rows.length > 0) {
-                    sendTelegramAlerts(Array.from(rows));
+        try {
+            var xhr = new unsafeWindow.XMLHttpRequest();
+            xhr.open('GET', url, true);
+            xhr.withCredentials = true;
+            xhr.timeout = 15000;
+            xhr.onload = function () {
+                if (xhr.responseURL && xhr.responseURL.indexOf('session-expired') !== -1) {
+                    sendTelegramCountAlert(incomingsCount); return;
+                }
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    var parser = new DOMParser();
+                    var doc = parser.parseFromString(xhr.responseText, 'text/html');
+                    var rows = doc.querySelectorAll('#incomings_table tr.row_a, #incomings_table tr.row_b');
+                    console.log('[AlGzawy] XHR rows:', rows.length, 'html:', xhr.responseText.length);
+                    if (rows.length > 0) processAttackRows(rows);
+                    else sendTelegramCountAlert(incomingsCount);
                 } else {
                     sendTelegramCountAlert(incomingsCount);
                 }
-            })
-            .catch(function (err) {
-                console.warn('[AlGzawy] fetchAttackDetails failed:', err.message);
-                sendTelegramCountAlert(incomingsCount);
-            });
+            };
+            xhr.onerror = xhr.ontimeout = function () { sendTelegramCountAlert(incomingsCount); };
+            xhr.send();
+        } catch (e) {
+            console.warn('[AlGzawy] XHR failed:', e);
+            sendTelegramCountAlert(incomingsCount);
+        }
     }
 
     function sendTelegramCountAlert(count) {
