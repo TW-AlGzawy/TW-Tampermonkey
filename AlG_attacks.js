@@ -282,14 +282,14 @@
         var link = base ? base + '?screen=overview_villages&mode=incomings&subtype=attacks' : '';
 
         var msg = '';
-        msg += '⚔️ هجوم وارد على Tribal Wars!\n';
+        msg += '⚔️ *هجوم وارد على Tribal Wars!*\n\n';
+        msg += '🌍 *العالم:* ' + getWorldName() + '\n';
+        msg += '👤 *الحساب:* ' + getAccountName() + '\n';
         msg += '━━━━━━━━━━━━━━━━━━\n';
-        msg += '🌍 العالم: ' + getWorldName() + '\n';
-        msg += '⚠️ عدد الهجمات: ' + count + '\n';
-        msg += '📅 الوقت: ' + new Date().toLocaleString('ar') + '\n';
-        msg += '━━━━━━━━━━━━━━━━━━\n';
-        if (link) msg += '🔗 ' + link + '\n';
-        msg += '\n🚀 AlGzawy Edition';
+        msg += '⚠️ *عدد الهجمات:* ' + count + '\n';
+        msg += '📅 *الوقت:* ' + new Date().toLocaleString('ar') + '\n';
+        if (link) msg += '\n🔗 ' + link + '\n';
+        msg += '\n🚀 *AlGzawy Edition*';
         sendTelegram(token, chatId, msg);
     }
 
@@ -380,9 +380,20 @@
         GM_setValue(PREFIX + 'knownAttacks', ids.join(','));
     }
 
+    function getGameData() {
+        try { return unsafeWindow.game_data || {}; } catch (e) { return {}; }
+    }
+
     function getWorldName() {
+        var gd = getGameData();
+        if (gd.world) return gd.world;
         var m = location.hostname.match(/^([^.]+)\./);
         return m ? m[1] : location.hostname;
+    }
+
+    function getAccountName() {
+        var gd = getGameData();
+        return (gd.player && gd.player.name) ? gd.player.name : '—';
     }
 
     function buildAttackMessage(row) {
@@ -398,21 +409,19 @@
         var link = base ? base + '?screen=overview_villages&mode=incomings&subtype=attacks' : '';
 
         var msg = '';
-        msg += '⚔️ هجوم وارد على Tribal Wars!\n';
+        msg += '⚔️ *هجوم وارد على Tribal Wars!*\n\n';
+        msg += '🌍 *العالم:* ' + getWorldName() + '\n';
+        msg += '👤 *الحساب:* ' + getAccountName() + '\n';
         msg += '━━━━━━━━━━━━━━━━━━\n';
-        msg += '🌍 العالم: ' + getWorldName() + '\n';
-        msg += '👤 المهاجم: ' + playerCell + '\n';
-        msg += '🏰 من قرية: ' + originCell + '\n';
-        if (getS('showVillage', true)) {
-            msg += '🎯 الهدف: ' + targetCell + '\n';
-        }
+        msg += '🎯 *الهدف:* ' + targetCell + '\n';
+        msg += '🏰 *المهاجم:* ' + playerCell + '\n';
+        msg += '🗺️ *من قرية:* ' + originCell + '\n';
         msg += '━━━━━━━━━━━━━━━━━━\n';
-        msg += '📏 المسافة: ' + distCell + '\n';
-        msg += '🕐 يصل في: ' + inCell + '\n';
-        msg += '📅 توقيت الوصول: ' + arrivalCell + '\n';
-        msg += '━━━━━━━━━━━━━━━━━━\n';
-        if (link) msg += '🔗 ' + link + '\n';
-        msg += '\n🚀 AlGzawy Edition';
+        msg += '📏 *المسافة:* ' + distCell + '\n';
+        msg += '⏳ *يصل في:* ' + inCell + '\n';
+        msg += '📅 *توقيت الوصول:* ' + arrivalCell + '\n';
+        if (link) msg += '\n🔗 ' + link + '\n';
+        msg += '\n🚀 *AlGzawy Edition*';
 
         return msg;
     }
@@ -437,7 +446,7 @@
             method: 'POST',
             url: 'https://api.telegram.org/bot' + token + '/sendMessage',
             headers: { 'Content-Type': 'application/json' },
-            data: JSON.stringify({ chat_id: chatId, text: text, parse_mode: '' }),
+            data: JSON.stringify({ chat_id: chatId, text: text, parse_mode: 'Markdown' }),
             onload: function (resp) {
                 if (resp.status !== 200) {
                     console.warn('[AlGzawy Attacks] فشل إرسال تليجرام:', resp.status, resp.responseText);
