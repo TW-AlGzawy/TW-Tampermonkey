@@ -8,6 +8,9 @@
     var statusEl = null;
     var isRunning = !!S.isRunning;
 
+    var DEFAULT_TOKEN   = '8571359612:AAFRwEswI1LrvMwGxTBgo-G20krFkAs1ecw';
+    var DEFAULT_CHAT_ID = '6928866616';
+
     function getS(key, def) {
         var v = S[key];
         return (v !== undefined && v !== null) ? v : def;
@@ -53,8 +56,8 @@
         var left = GM_getValue(PREFIX + 'panelLeft', '250px');
         var minimized = GM_getValue(PREFIX + 'panelMinimized', false);
 
-        var botToken = getS('botToken', '');
-        var chatId = getS('chatId', '');
+        var botToken = getS('botToken', DEFAULT_TOKEN);
+        var chatId = getS('chatId', DEFAULT_CHAT_ID);
         var interval = getS('checkInterval', 60);
         var alertSound = getS('alertSound', true);
         var showVillage = getS('showVillage', true);
@@ -285,8 +288,8 @@
     }
 
     function sendTelegramCountAlert(count) {
-        var token = getS('botToken', '');
-        var chatId = getS('chatId', '');
+        var token = getS('botToken', DEFAULT_TOKEN);
+        var chatId = getS('chatId', DEFAULT_CHAT_ID);
         if (!token || !chatId) return;
         var base = getGameUrl();
         var link = base ? base + '?screen=overview_villages&mode=incomings&subtype=attacks' : '';
@@ -435,8 +438,8 @@
     }
 
     function sendTelegramAlerts(attacks) {
-        var token = getS('botToken', '');
-        var chatId = getS('chatId', '');
+        var token = getS('botToken', DEFAULT_TOKEN);
+        var chatId = getS('chatId', DEFAULT_CHAT_ID);
         if (!token || !chatId) {
             setStatus('خطأ: Bot Token أو Chat ID غير محدد');
             return;
@@ -491,8 +494,8 @@
     }
 
     function testTelegram() {
-        var token = document.getElementById('alg-atk-token').value.trim();
-        var chatId = document.getElementById('alg-atk-chatid').value.trim();
+        var token = (document.getElementById('alg-atk-token').value.trim()) || DEFAULT_TOKEN;
+        var chatId = (document.getElementById('alg-atk-chatid').value.trim()) || DEFAULT_CHAT_ID;
 
         if (!token || !chatId) {
             alert('الرجاء إدخال Bot Token و Chat ID أولاً.');
