@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AlGzawy - تنبيه الهجمات (Telegram)
 // @namespace    AlGzawy-Scripts-attacks-loader
-// @version      2.8
+// @version      2.9
 // @description  ينبهك على التليجرام عند وجود هجمات على قريتك في Tribal Wars
 // @author       AlGzawy
 // @include      https://*.tribalwars.*/game.php*
